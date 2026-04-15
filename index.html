@@ -408,8 +408,8 @@
                 <table class="table table-hover table-bordered small">
                     <thead class="table-light sticky-top">
                         <tr>
-                            <th width="15%">Archivo</th>
-                            <th width="10%">Asignatura</th>
+                            <th width="15%">Sigla</th>
+                            <th width="20%">Asignatura</th>
                             <th width="10%">Tipo</th>
                             <th width="40%">Referencia</th>
                             <th width="25%">Validación</th>
@@ -1071,25 +1071,35 @@
 
     // Extractor específico para DOCX — usa párrafos HTML para respetar estructura
     function extraerYAcumularDocx(html, filename) {
-        // Parsear HTML a párrafos
         const div = document.createElement('div');
         div.innerHTML = html;
+
+        // FIX: combinar celdas de cada fila de tabla en un solo texto "Sigla ICI 1241"
+        // para que el regex detecte clave y nombre aunque estén en celdas separadas
+        const filasTabla = Array.from(div.querySelectorAll('tr')).map(tr =>
+            Array.from(tr.querySelectorAll('td, th'))
+                .map(td => td.textContent.trim()).filter(t => t).join(' ')
+        ).filter(t => t.length > 0);
+
+        // Párrafos normales para la bibliografía
         const parrafos = Array.from(div.querySelectorAll('p, li')).map(el => el.textContent.trim()).filter(t => t.length > 0);
 
         let carrera = '', clave = '', nombre = '';
 
-        // Detectar metadatos del documento
-        parrafos.forEach(p => {
-            if (/(?:Sigla|Código|Clave)[:\s,]+([A-Z]{2,4}\s*\d{3,5})/i.test(p)) {
-                const m = p.match(/(?:Sigla|Código|Clave)[:\s,]+([A-Z]{2,4}\s*\d{3,5})/i);
+        // Detectar metadatos buscando en filas de tabla Y párrafos
+        [...filasTabla, ...parrafos].forEach(p => {
+            if (!clave) {
+                const m = p.match(/(?:Sigla|Código|Clave)[\s:\t,]+([A-Z]{2,6}\s*\d{3,5})/i);
                 if (m) clave = m[1].trim();
             }
-            if (/^Asignatura\s+([A-Z]{2,4}\s*\d{3,5})/i.test(p)) {
-                const m = p.match(/^Asignatura\s+([A-Z]{2,4}\s*\d{3,5})\s*[:\t]+\s*(.+)/i);
-                if (m) { clave = m[1].trim(); nombre = m[2].trim(); }
+            if (!nombre) {
+                // FIX: patrón anclado — "Nombre Asignatura" o "Nombre de la Asignatura" al inicio
+                const m = p.match(/^Nombre\s+(?:de\s+la\s+)?Asignatura[\s:\t]+(.+)/i)
+                       || p.match(/^Nombre\s+del?\s+Curso[\s:\t]+(.+)/i);
+                if (m) nombre = m[1].trim().replace(/^"|"$/g, '').substring(0, 100);
             }
-            if (/(?:^|\s)Carrera[:\s]+(.+)/i.test(p) && !carrera) {
-                const m = p.match(/Carrera[:\s]+(.+)/i);
+            if (!carrera) {
+                const m = p.match(/^Carrera[\s:\t]+(.+)/i);
                 if (m) carrera = m[1].trim().substring(0, 60);
             }
         });
@@ -1138,16 +1148,18 @@
         let carrera = '', clave = '', nombre = '';
 
         lineas.forEach(l => {
-            if (!clave && /(?:Sigla|Código|Clave)[:\s,]+([A-Z]{2,4}\s*\d{3,5})/i.test(l)) {
-                const m = l.match(/(?:Sigla|Código|Clave)[:\s,]+([A-Z]{2,4}\s*\d{3,5})/i);
+            if (!clave) {
+                const m = l.match(/(?:Sigla|Código|Clave)[\s:\t,]+([A-Z]{2,6}\s*\d{3,5})/i);
                 if (m) clave = m[1].trim();
             }
-            if (!nombre && /(?:Nombre de la asignatura|Asignatura|Nombre del Curso)[:\s,"]+(.+)/i.test(l)) {
-                const m = l.match(/(?:Nombre de la asignatura|Asignatura|Nombre del Curso)[:\s,"]+(.+)/i);
-                if (m) nombre = m[1].trim().replace(/^"|"$/g, '').substring(0, 80);
+            if (!nombre) {
+                // FIX: anclar al inicio de línea para evitar capturar "I. IDENTIFICACIÓN DE LA ASIGNATURA"
+                const m = l.match(/^Nombre\s+(?:de\s+la\s+)?Asignatura[\s:\t]+(.+)/i)
+                       || l.match(/^Nombre\s+del?\s+Curso[\s:\t]+(.+)/i);
+                if (m) nombre = m[1].trim().replace(/^"|"$/g, '').substring(0, 100);
             }
-            if (!carrera && /Carrera[:\s]+(.+)/i.test(l)) {
-                const m = l.match(/Carrera[:\s]+(.+)/i);
+            if (!carrera) {
+                const m = l.match(/^Carrera[\s:\t]+(.+)/i);
                 if (m) carrera = m[1].trim().substring(0, 60);
             }
         });
@@ -1257,8 +1269,8 @@
             grupo.items.forEach(d => {
                 let clase = d.status.level === 'success' ? 'row-ok' : (d.status.level === 'warning' ? 'row-warning' : 'row-error');
                 tbody.innerHTML += `<tr class="${clase}">
-                    <td><small class="text-muted">${d.archivo}</small></td>
-                    <td><small>${d.nombre}</small></td>
+                    <td><small class="text-muted">${d.clave || '—'}</small></td>
+                    <td><small>${d.nombre || '—'}</small></td>
                     <td><span class="badge bg-secondary">${d.tipo}</span></td>
                     <td><small>${d.ref}</small></td>
                     <td><small>${d.status.msg}</small></td>
