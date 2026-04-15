@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bibliografía Académica · PUCV</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        /* ── Variables ─────────────────────────────────────────────────────── */
+        :root {
+            --navy:    #1e3355;
+            --navy-md: #2a4a7a;
+            --gold:    #b8952a;
+            --gold-lt: #f0e6c8;
+            --gold-bd: #d4b96a;
+            --cream:   #faf7f2;
+            --paper:   #ffffff;
+            --border:  #ddd5c5;
+            --text:    #2d2a24;
+            --muted:   #7a7060;
+            --green:   #1a6b3a;
+            --green-lt:#d6ede1;
+            --r: 8px;
+        }
+
+        /* ── Base ───────────────────────────────────────────────────────────── */
+        body {
+            background: var(--cream);
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        /* ── Contenedor principal ───────────────────────────────────────────── */
+        .main-container {
+            max-width: 1260px;
+            margin: 28px auto 40px;
+            background: var(--paper);
+            border-radius: 14px;
+            box-shadow: 0 4px 32px rgba(30,51,85,.10), 0 1px 4px rgba(0,0,0,.04);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        /* ── Encabezado ─────────────────────────────────────────────────────── */
+        .app-header {
+            background: linear-gradient(135deg, var(--navy) 0%, var(--navy-md) 100%);
+            color: white;
+            padding: 18px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--gold);
+        }
+        .app-header-left { display: flex; align-items: center; gap: 16px; }
+        .app-header-logo {
+            width: 44px; height: 44px;
+            background: rgba(255,255,255,.12);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+        }
+        .app-title {
+            margin: 0;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -.02em;
+        }
+        .app-subtitle {
+            font-size: 11px;
+            color: rgba(255,255,255,.55);
+            margin: 2px 0 0;
+            font-weight: 400;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+        .app-header .btn-outline-light {
+            border-color: rgba(255,255,255,.35);
+            color: rgba(255,255,255,.85);
+            font-size: 12px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-family: 'Lato', sans-serif;
+        }
+        .app-header .btn-outline-light:hover {
+            background: rgba(255,255,255,.15);
+            color: white;
+        }
+
+        /* ── Pestañas ───────────────────────────────────────────────────────── */
+        .nav-tabs {
+            background: var(--navy);
+            border-bottom: none;
+            padding: 0 20px;
+            gap: 2px;
+        }
+        .nav-link {
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            font-size: 13px;
+            color: rgba(255,255,255,.55);
+            border: none !important;
+            border-radius: 0;
+            padding: 13px 22px 11px;
+            letter-spacing: .02em;
+            border-bottom: 3px solid transparent !important;
+            margin-bottom: 0;
+            transition: color .2s, border-color .2s;
+        }
+        .nav-link:hover { color: rgba(255,255,255,.85); }
+        .nav-link.active {
+            background: transparent !important;
+            color: var(--gold-bd) !important;
+            border-bottom-color: var(--gold-bd) !important;
+        }
+        .tab-content { padding: 32px 36px; background: var(--paper); }
+
+        /* ── Sección headings ───────────────────────────────────────────────── */
+        .tab-pane h3 {
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+            font-size: 1.25rem;
+            letter-spacing: -.02em;
+            margin-bottom: 20px;
+        }
+        .card h5 { font-family: 'DM Sans', sans-serif; font-size: .95rem; color: var(--navy); font-weight: 600; }
+
+        /* ── Autocompletado ─────────────────────────────────────────────────── */
+        .auto-fill-box {
+            background: linear-gradient(to right, #eef4ff, #f5f0ff);
+            border: 1px solid #c8d8f8;
+            padding: 16px 18px;
+            border-radius: var(--r);
+            margin-bottom: 20px;
+        }
+        .auto-fill-box .form-label { color: var(--navy); font-weight: 700; font-size: 13px; }
+
+        /* ── Botones ────────────────────────────────────────────────────────── */
+        .btn-magic {
+            background: linear-gradient(135deg, #5e35b1, #7c4dff);
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+        .btn-magic:hover { background: linear-gradient(135deg, #4a27a0, #6a3de8); color: white; }
+
+        .btn-primary {
+            background: var(--navy);
+            border-color: var(--navy);
+            font-weight: 600;
+        }
+        .btn-primary:hover { background: var(--navy-md); border-color: var(--navy-md); }
+
+        .btn-success {
+            background: var(--green);
+            border-color: var(--green);
+            font-weight: 600;
+        }
+
+        /* ── Formularios ────────────────────────────────────────────────────── */
+        .form-control, .form-select {
+            border-color: var(--border);
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13.5px;
+            background: var(--paper);
+            color: var(--text);
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--navy-md);
+            box-shadow: 0 0 0 3px rgba(42,74,122,.12);
+        }
+        .form-label { font-size: 12.5px; font-weight: 600; color: var(--muted); letter-spacing: .02em; margin-bottom: 4px; }
+
+        /* ── Drop zones ─────────────────────────────────────────────────────── */
+        .drop-zone {
+            border: 2px dashed var(--gold-bd);
+            background: var(--gold-lt);
+            border-radius: 12px;
+            padding: 42px;
+            text-align: center;
+            cursor: pointer;
+            transition: .25s;
+        }
+        .drop-zone:hover { background: #ede3c5; border-color: var(--gold); }
+        .drop-zone h4 { font-family: 'DM Sans', sans-serif; color: var(--navy); font-size: 1.1rem; font-weight: 600; }
+
+        .drop-zone-import {
+            border-color: #9c78d4;
+            background: #f4f0fc;
+        }
+        .drop-zone-import:hover { background: #ebe3fa; border-color: #7c4dff; }
+        .drop-zone-import h4 { color: #5e35b1; }
+
+        /* ── Tablas ─────────────────────────────────────────────────────────── */
+        .table {
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+        }
+        .table thead th {
+            font-family: 'Inter', sans-serif;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: .07em;
+            text-transform: uppercase;
+        }
+        .table-dark thead {
+            background: var(--navy) !important;
+        }
+        .table-bordered { border-color: var(--border) !important; }
+        .table-bordered td, .table-bordered th { border-color: var(--border) !important; }
+        .table-hover tbody tr:hover { background: rgba(184,149,42,.06) !important; }
+        .table-light { background: var(--cream) !important; }
+        .table-striped tbody tr:nth-of-type(odd) { background: rgba(250,247,242,.7); }
+
+        /* ── Row states ─────────────────────────────────────────────────────── */
+        .row-ok      { background-color: #d6ede1 !important; }
+        .row-warning { background-color: #fdf4d6 !important; }
+        .row-error   { background-color: #fad8da !important; }
+
+        /* ── Badges ─────────────────────────────────────────────────────────── */
+        .badge.bg-primary { background: var(--navy) !important; }
+        .badge.bg-secondary { background: var(--muted) !important; }
+        .badge.bg-success { background: var(--green) !important; }
+
+        /* ── Requerido ──────────────────────────────────────────────────────── */
+        .req-star { color: #c0392b; font-weight: bold; }
+
+        /* ── Resumen disponibilidad ─────────────────────────────────────────── */
+        #disp_resumen .fw-bold.fs-4 { font-family: 'DM Sans', sans-serif; font-size: 2rem !important; font-weight: 700; }
+
+        /* ── Modal ──────────────────────────────────────────────────────────── */
+        .modal-header.bg-dark { background: var(--navy) !important; }
+        .modal-manual-body {
+            max-height: 75vh; overflow-y: auto;
+            text-align: left; padding: 28px 32px;
+            background: var(--paper); line-height: 1.7;
+            font-family: 'Inter', sans-serif;
+        }
+        .manual-step-box {
+            background: var(--cream);
+            border-left: 4px solid var(--navy);
+            padding: 16px 18px;
+            margin-bottom: 14px;
+            border-radius: 0 var(--r) var(--r) 0;
+        }
+        .manual-step-box h5 { font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700; }
+        .step-number { font-weight: 700; color: var(--navy); font-size: 1.05em; margin-right: 4px; }
+
+        /* ── Alert info ─────────────────────────────────────────────────────── */
+        .alert-info {
+            background: #eef4ff !important;
+            border-color: #c2d4f5 !important;
+            color: var(--navy) !important;
+        }
+
+        /* ── Sticky thead ───────────────────────────────────────────────────── */
+        .sticky-top { top: 0; z-index: 2; }
+
+        /* ── Scrollbar suave ────────────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--cream); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gold-bd); }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <div class="app-header">
+        <div class="app-header-left">
+            <div class="app-header-logo">📚</div>
+            <div>
+                <h1 class="app-title">Bibliografía Académica</h1>
+                <div class="app-subtitle">Pontificia Universidad Católica de Valparaíso</div>
+            </div>
+        </div>
+        <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#manualModal">
+            📖 Manual de Uso
+        </button>
+    </div>
+
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="gestor-tab" data-bs-toggle="tab" data-bs-target="#gestor-pane" type="button">
+                🛠️ Gestor & Creador APA 7
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="extractor-tab" data-bs-toggle="tab" data-bs-target="#extractor-pane" type="button">
+                📂 Extractor Masivo (Auditoría)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="importador-tab" data-bs-toggle="tab" data-bs-target="#importador-pane" type="button">
+                📚 Importador Zotero/Mendeley
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="disponibilidad-tab" data-bs-toggle="tab" data-bs-target="#disponibilidad-pane" type="button">
+                🔍 Disponibilidad PUCV
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        
+        <div class="tab-pane fade show active" id="gestor-pane">
+            <h3 class="mb-4 text-primary">Gestor Inteligente de Bibliografías</h3>
+            <div class="card mb-4 border-light bg-light">
+                <div class="card-body">
+                    <h5>1. Datos de Contexto</h5>
+                    <div class="row g-3">
+                        <div class="col-md-4"><label class="form-label">Carrera</label><input type="text" id="g_carrera" class="form-control" placeholder="Ej. Ingeniería"></div>
+                        <div class="col-md-4"><label class="form-label">Clave</label><input type="text" id="g_clave" class="form-control" placeholder="Ej. MAT-101"></div>
+                        <div class="col-md-4"><label class="form-label">Asignatura</label><input type="text" id="g_nombre" class="form-control" placeholder="Ej. Cálculo I"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="auto-fill-box">
+                <label class="form-label fw-bold text-primary">✨ Autocompletado (Limpieza Profunda)</label>
+                <div class="input-group">
+                    <input type="text" id="inputMagic" class="form-control" placeholder="Pega DOI (ej: 10.1002/...) o ISBN">
+                    <button class="btn btn-magic" type="button" onclick="gestor_buscarMetadatos()" id="btnBuscar">🪄 Buscar y Rellenar</button>
+                </div>
+                <small class="text-muted">El sistema corrige automáticamente títulos en mayúsculas y elimina textos comerciales.</small>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Tipo de Recurso</label>
+                    <select id="tipoRecurso" class="form-select" onchange="gestor_actualizarFormulario()">
+                        <option value="">-- Seleccione --</option>
+                        <option value="libro">Libro Completo</option>
+                        <option value="capitulo">Capítulo de Libro</option>
+                        <option value="revista">Artículo Científico</option>
+                        <option value="tesis">Tesis / Trabajo de Grado</option>
+                        <option value="informe">Informe Técnico / Institucional</option>
+                        <option value="conferencia">Ponencia / Conferencia</option>
+                        <option value="web">Sitio Web</option>
+                        <option value="youtube">YouTube</option>
+                        <option value="ia">IA (ChatGPT)</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Tipo Bibliografía</label>
+                    <select id="tipoBiblio" class="form-select">
+                        <option value="Básica">Básica</option>
+                        <option value="Complementaria">Complementaria</option>
+                    </select>
+                </div>
+                <div id="camposDinamicos" class="row g-3 mt-1"></div>
+                <div class="col-12 mt-3"><button class="btn btn-primary w-100" onclick="gestor_agregarReferencia()">+ Agregar a la Lista</button></div>
+            </div>
+
+            <div class="mt-4">
+                <h4>Referencias Cargadas</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped" id="tablaGestor">
+                        <thead class="table-dark"><tr><th>Tipo</th><th>Referencia APA 7</th><th>ISBN</th><th>Acción</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <button class="btn btn-success mt-3" onclick="gestor_exportarExcel()">📥 Descargar Excel (Gestor)</button>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="extractor-pane">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="text-success">Extractor Masivo de Bibliografía</h3>
+                <div>
+                    <span class="badge bg-secondary me-2" id="badgeArchivos">0 Archivos</span>
+                    <span class="badge bg-primary" id="badgeRefs">0 Refs Totales</span>
+                </div>
+            </div>
+
+            <div class="drop-zone" id="dropZone">
+                <h4>📂 Arrastra tus archivos aquí</h4>
+                <p class="text-muted">Soporta PDF y Word (.docx). <strong>Mejorado para detectar sección de bibliografía en programas PUCV.</strong></p>
+                <input type="file" id="fileInput" multiple style="display:none">
+                <button class="btn btn-outline-primary btn-sm mt-2" onclick="document.getElementById('fileInput').click()">O selecciona archivos</button>
+            </div>
+
+            <div class="d-flex justify-content-between mt-3 mb-2">
+                <button class="btn btn-danger btn-sm" onclick="ext_reiniciarTodo()">🗑️ Limpiar Todo</button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary disabled" id="btnEnviarGestor" onclick="ext_enviarAlGestor()">➡️ Enviar al Gestor</button>
+                    <button class="btn btn-success disabled" id="btnDescargarExt" onclick="ext_exportarExcel()">📥 Descargar Excel Unificado</button>
+                </div>
+            </div>
+
+            <!-- Resumen por asignatura -->
+            <div id="ext_resumenAsignaturas" style="display:none;" class="mb-3">
+                <h6 class="text-muted mb-2">Asignaturas cargadas</h6>
+                <div id="ext_resumenLista" class="d-flex flex-wrap gap-2"></div>
+            </div>
+
+            <div class="table-responsive mt-3" style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-hover table-bordered small">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th width="15%">Archivo</th>
+                            <th width="10%">Asignatura</th>
+                            <th width="10%">Tipo</th>
+                            <th width="40%">Referencia</th>
+                            <th width="25%">Validación</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaExtractorBody">
+                        <tr><td colspan="5" class="text-center text-muted py-4">Esperando archivos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="statusLog" class="text-muted small mt-2">Listo para procesar.</div>
+        </div>
+
+        <div class="tab-pane fade" id="importador-pane">
+            <h3 class="mb-1" style="color: #6610f2;">📚 Importador Zotero / Mendeley</h3>
+            <p class="text-muted mb-4">Sube archivos <strong>.RIS</strong> o <strong>.BIB</strong> exportados desde Zotero o Mendeley.</p>
+
+            <div class="drop-zone drop-zone-import" id="dropZoneImport" onclick="document.getElementById('fileInputImport').click()">
+                <h4 style="color: #6610f2;">📚 Arrastra tu archivo .RIS o .BIB aquí</h4>
+                <p class="text-muted mb-1">O haz clic para seleccionar</p>
+                <input type="file" id="fileInputImport" accept=".ris,.bib" style="display:none">
+                <button class="btn btn-outline-secondary btn-sm mt-1" onclick="event.stopPropagation(); document.getElementById('fileInputImport').click()">Seleccionar Archivo</button>
+            </div>
+
+            <div class="mt-4" id="importResults" style="display:none;">
+
+                <!-- Datos de contexto -->
+                <div class="card mb-3 border-light bg-light">
+                    <div class="card-body">
+                        <h6 class="mb-3">Datos de contexto <small class="text-muted fw-normal">(se asignan a todas las referencias importadas)</small></h6>
+                        <div class="row g-2">
+                            <div class="col-md-3"><label class="form-label small">Carrera</label><input type="text" id="imp_carrera" class="form-control form-control-sm" placeholder="Ej. Pedagogía en Matemática"></div>
+                            <div class="col-md-2"><label class="form-label small">Clave</label><input type="text" id="imp_clave" class="form-control form-control-sm" placeholder="Ej. IMA 1001"></div>
+                            <div class="col-md-4"><label class="form-label small">Asignatura</label><input type="text" id="imp_asignatura" class="form-control form-control-sm" placeholder="Ej. Cálculo I"></div>
+                            <div class="col-md-3"><label class="form-label small">Aplicar tipo a todas</label>
+                                <div class="input-group input-group-sm">
+                                    <select id="imp_tipo" class="form-select form-select-sm">
+                                        <option value="Básica">Básica</option>
+                                        <option value="Complementaria">Complementaria</option>
+                                    </select>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="imp_aplicarTipoGlobal(document.getElementById('imp_tipo').value)" title="Aplicar a todas las filas">↓ Todas</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <h6 class="mb-0">Referencias <span class="badge bg-secondary" id="imp_badge">0</span></h6>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="imp_seleccionarTodas()" style="font-size:.8rem;">☑ Todas</button>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="imp_deseleccionarTodas()" style="font-size:.8rem;">☐ Ninguna</button>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="imp_copiarTodas()">📋 Copiar todas</button>
+                        <button class="btn btn-primary btn-sm" onclick="imp_enviarAlGestor()">➡️ Enviar seleccionadas</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover table-sm">
+                        <thead class="table-light"><tr><th width="40" class="text-center">✓</th><th>Referencia APA 7</th><th width="140">Tipo</th><th width="60" class="text-center">Copiar</th></tr></thead>
+                        <tbody id="tablaImportadorBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL DE DISPONIBILIDAD PUCV -->
+        <div class="tab-pane fade" id="disponibilidad-pane">
+            <h3 class="mb-1" style="color:#0d6efd;">🔍 Panel de Disponibilidad PUCV</h3>
+            <p class="text-muted mb-4">Consulta si los libros de una bibliografía están en el catálogo de la Biblioteca PUCV. Se abrirá el catálogo con la búsqueda lista en una nueva pestaña.</p>
+
+            <!-- Instrucciones paso a paso -->
+            <div class="alert alert-info d-flex gap-3 align-items-start mb-4" style="border-left: 4px solid #0d6efd; border-radius:8px;">
+                <span style="font-size:1.4rem;">💡</span>
+                <div>
+                    <strong>¿Cómo funciona?</strong><br>
+                    Ingresa las referencias manualmente o cárgalas desde el Gestor. Luego haz clic en <strong>"Buscar en catálogo"</strong> para cada libro — se abre el catálogo PUCV con la búsqueda lista. Marca el resultado y genera el informe final.
+                </div>
+            </div>
+
+            <!-- Carga desde Gestor -->
+            <div class="card mb-4 border-light bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <h6 class="mb-0">Cargar desde el Gestor Principal</h6>
+                            <small class="text-muted">Importa automáticamente las referencias ya cargadas en el Gestor APA 7</small>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="disp_cargarDesdeGestor()">📥 Importar desde Gestor</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agregar referencia manual -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h6 class="mb-3">Agregar libro manualmente</h6>
+                    <div class="row g-2">
+                        <div class="col-md-5">
+                            <input type="text" id="disp_titulo" class="form-control" placeholder="Título del libro *">
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" id="disp_autor" class="form-control" placeholder="Autor (opcional)">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" id="disp_anio" class="form-control" placeholder="Año">
+                        </div>
+                        <div class="col-md-1">
+                            <button class="btn btn-success w-100" onclick="disp_agregarManual()" title="Agregar">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla principal -->
+            <div class="table-responsive mb-3">
+                <table class="table table-bordered table-hover" id="disp_tabla">
+                    <thead class="table-dark">
+                        <tr>
+                            <th width="35%">Título</th>
+                            <th width="22%">Autor</th>
+                            <th width="7%">Año</th>
+                            <th width="16%">Buscar en PUCV</th>
+                            <th width="13%">Disponibilidad</th>
+                            <th width="7%">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="disp_tbody">
+                        <tr><td colspan="6" class="text-center text-muted py-4">Aún no hay libros en la lista. Agrega uno arriba o importa desde el Gestor.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Resumen + exportar -->
+            <div id="disp_resumen" style="display:none;" class="mb-3">
+                <div class="row g-3 text-center mb-3">
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background:#d1e7dd; border:1px solid #a3cfbb;">
+                            <div class="fw-bold fs-4" id="disp_cnt_disponible">0</div>
+                            <small class="text-success fw-bold">✅ Disponible</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background:#fff3cd; border:1px solid #ffe69c;">
+                            <div class="fw-bold fs-4" id="disp_cnt_prestado">0</div>
+                            <small class="text-warning fw-bold">🟡 Prestado / Revisar</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background:#f8d7da; border:1px solid #f1aeb5;">
+                            <div class="fw-bold fs-4" id="disp_cnt_noesta">0</div>
+                            <small class="text-danger fw-bold">🔴 No está en catálogo</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background:#e2e3e5; border:1px solid #c4c5c7;">
+                            <div class="fw-bold fs-4" id="disp_cnt_sin">0</div>
+                            <small class="text-muted fw-bold">⬜ Sin verificar</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-success" onclick="disp_exportarExcel()">📥 Descargar informe Excel</button>
+                    <button class="btn btn-outline-danger" onclick="disp_limpiar()">🗑️ Limpiar lista</button>
+                </div>
+            </div>
+        </div>
+        <!-- FIN Panel Disponibilidad -->
+
+    </div>
+</div>
+
+<div class="modal fade" id="manualModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">📖 Manual de Uso — Bibliografía Académica</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body modal-manual-body">
+
+                <!-- GESTOR -->
+                <div class="manual-step-box">
+                    <h5 class="text-primary mb-2">🛠️ Gestor & Creador APA 7</h5>
+                    <p>Permite crear referencias bibliográficas en formato APA 7 de forma manual o automática, y exportarlas en la planilla oficial institucional.</p>
+                    <p><span class="step-number">1.</span><strong>Datos de contexto:</strong> Ingresa la Carrera, Clave y Asignatura antes de agregar referencias. Estos datos se asocian a cada referencia y aparecerán en la planilla Excel.</p>
+                    <p><span class="step-number">2.</span><strong>Autocompletado por ISBN o DOI:</strong> Pega el ISBN o DOI del libro o artículo y haz clic en <em>Buscar y Rellenar</em>. El sistema consulta Google Books y OpenLibrary y rellena los campos automáticamente. Si el autor no se encuentra, se mostrará una advertencia para ingresarlo manualmente.</p>
+                    <p><span class="step-number">3.</span><strong>Ingreso manual:</strong> Selecciona el tipo de recurso (Libro, Capítulo, Artículo, Tesis, Informe, Conferencia, Web, YouTube, IA) y completa los campos que aparecen. Haz clic en <em>+ Agregar a la Lista</em>.</p>
+                    <p><span class="step-number">4.</span><strong>Exportar planilla:</strong> Una vez cargadas todas las referencias, haz clic en <em>Descargar Excel</em>. La planilla saldrá en el formato oficial institucional, agrupada por asignatura con separadores de bibliografía básica y complementaria.</p>
+                    <p class="text-muted small mb-0">💡 Puedes cargar referencias de múltiples asignaturas en el mismo Gestor. Al exportar, cada asignatura quedará agrupada por separado en la planilla.</p>
+                </div>
+
+                <!-- EXTRACTOR -->
+                <div class="manual-step-box">
+                    <h5 class="text-success mb-2">📂 Extractor Masivo</h5>
+                    <p>Carga programas de asignatura en PDF o Word y extrae automáticamente las referencias bibliográficas, detectando si son básicas o complementarias.</p>
+                    <p><span class="step-number">1.</span><strong>Cargar archivos:</strong> Arrastra uno o varios archivos PDF o Word (.docx) a la zona de carga. Puedes cargar múltiples asignaturas de una vez.</p>
+                    <p><span class="step-number">2.</span><strong>Detección automática:</strong> El sistema identifica la sección de bibliografía, detecta la asignatura y la clave, y clasifica las referencias como <em>Básica</em> o <em>Complementaria</em>. También reconoce variantes como <em>Obligatoria</em> o <em>Recomendada</em>.</p>
+                    <p><span class="step-number">3.</span><strong>Editar si es necesario:</strong> Si el sistema no detectó correctamente la clave o nombre de una asignatura, usa el botón <em>✏️ Editar</em> en el separador gris para corregirlo antes de exportar.</p>
+                    <p><span class="step-number">4.</span><strong>Enviar al Gestor o descargar:</strong> Usa <em>➡️ Enviar al Gestor</em> para combinar con otras referencias y exportar la planilla oficial, o usa <em>📥 Descargar Excel Unificado</em> para exportar directamente en formato oficial.</p>
+                    <p class="text-muted small mb-0">⚠️ La calidad de extracción depende del formato del documento. PDFs escaneados (imágenes) no son procesables. Si el documento tiene un formato muy irregular, usa el Gestor para ingresar las referencias manualmente.</p>
+                </div>
+
+                <!-- IMPORTADOR -->
+                <div class="manual-step-box">
+                    <h5 mb-2 style="color:#6610f2;">📚 Importador Zotero / Mendeley</h5>
+                    <p>Importa referencias exportadas desde Zotero o Mendeley en formato .RIS o .BibTeX y las convierte a APA 7.</p>
+                    <p><span class="step-number">1.</span><strong>Exportar desde Zotero/Mendeley:</strong> En tu gestor bibliográfico, selecciona las referencias y expórtalas en formato RIS (.ris) o BibTeX (.bib).</p>
+                    <p><span class="step-number">2.</span><strong>Cargar el archivo:</strong> Arrastra el archivo .ris o .bib a la zona de carga.</p>
+                    <p><span class="step-number">3.</span><strong>Asignar a una asignatura:</strong> Completa los campos Carrera, Clave y Asignatura. Luego marca con el checkbox las referencias que pertenecen a esa asignatura y asigna el tipo (Básica o Complementaria) a cada una.</p>
+                    <p><span class="step-number">4.</span><strong>Enviar por grupos:</strong> Haz clic en <em>➡️ Enviar seleccionadas</em>. Luego cambia la Clave y Asignatura, selecciona el siguiente grupo y repite. Usa los botones <em>☑ Todas</em> y <em>☐ Ninguna</em> para agilizar la selección.</p>
+                    <p><span class="step-number">5.</span><strong>Exportar:</strong> Ve al Gestor Principal donde aparecerán todas las referencias enviadas y descarga la planilla oficial.</p>
+                    <p class="text-muted small mb-0">💡 El botón <em>↓ Todas</em> junto al selector de tipo aplica el mismo tipo a todas las filas de golpe.</p>
+                </div>
+
+                <!-- DISPONIBILIDAD -->
+                <div class="manual-step-box">
+                    <h5 style="color:#0d6efd;" class="mb-2">🔍 Disponibilidad PUCV</h5>
+                    <p>Verifica si los libros de una bibliografía están disponibles en el catálogo de la Biblioteca PUCV.</p>
+                    <p><span class="step-number">1.</span><strong>Cargar referencias:</strong> Haz clic en <em>📥 Importar desde Gestor</em> para traer automáticamente los libros del Gestor Principal, o agrega títulos manualmente.</p>
+                    <p><span class="step-number">2.</span><strong>Buscar en catálogo:</strong> Para cada libro haz clic en <em>🔍 Buscar</em>. Se abrirá el catálogo PUCV con la búsqueda lista en una nueva pestaña. El sistema normaliza automáticamente títulos con caracteres especiales, tildes e idiomas extranjeros para mejorar los resultados.</p>
+                    <p><span class="step-number">3.</span><strong>Marcar disponibilidad:</strong> Revisa el resultado en el catálogo y vuelve a la aplicación para marcar el estado: ✅ Disponible / 🟡 Prestado o Revisar / 🔴 No está en catálogo.</p>
+                    <p><span class="step-number">4.</span><strong>Descargar informe:</strong> El botón <em>📥 Descargar informe Excel</em> genera un informe con el estado de cada libro y un enlace directo al catálogo PUCV para cada uno.</p>
+                    <p class="text-muted small mb-0">💡 El semáforo de resumen muestra el panorama general de disponibilidad de la bibliografía completa.</p>
+                </div>
+
+                <!-- FLUJO RECOMENDADO -->
+                <div class="manual-step-box" style="border-left-color: #198754;">
+                    <h5 class="text-success mb-2">✅ Flujo de trabajo recomendado</h5>
+                    <p class="mb-1"><strong>Opción A — Desde un programa de asignatura (PDF/Word):</strong></p>
+                    <p class="text-muted small">Extractor Masivo → Enviar al Gestor → Descargar planilla Excel oficial</p>
+                    <p class="mb-1"><strong>Opción B — Ingreso manual o por ISBN:</strong></p>
+                    <p class="text-muted small">Gestor (ingresar referencias) → Descargar planilla Excel oficial</p>
+                    <p class="mb-1"><strong>Opción C — Desde Zotero o Mendeley:</strong></p>
+                    <p class="text-muted small">Importador (cargar .RIS/.BIB → seleccionar grupos → enviar) → Gestor → Descargar planilla</p>
+                    <p class="mb-1"><strong>Opción D — Verificar disponibilidad:</strong></p>
+                    <p class="text-muted small">Cualquiera de las opciones anteriores → Panel Disponibilidad PUCV → Descargar informe</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    let gestor_refs = [];
+    const gestor_campos = {
+        'libro':       [{id:'autor',l:'Autor(es)',p:'Apellido, N.'},{id:'anio',l:'Año',p:'2020'},{id:'titulo',l:'Título',p:''},{id:'editorial',l:'Editorial',p:'',opt:true},{id:'isbn',l:'ISBN',p:'Ej. 9781292027661',opt:true}],
+        'capitulo':    [{id:'autor',l:'Autor Capítulo',p:''},{id:'anio',l:'Año',p:''},{id:'tituloCap',l:'Título Capítulo',p:''},{id:'editor',l:'Editores',p:'In J. Doe (Ed.)'},{id:'tituloLibro',l:'Título Libro',p:''},{id:'paginas',l:'Páginas',p:'pp. 20-30'}],
+        'revista':     [{id:'autor',l:'Autor(es)',p:''},{id:'anio',l:'Año',p:''},{id:'tituloArt',l:'Título Artículo',p:''},{id:'revista',l:'Nombre Revista',p:''},{id:'volumen',l:'Vol.',p:'',opt:true},{id:'numero',l:'Núm.',p:'',opt:true},{id:'paginas',l:'Págs.',p:'',opt:true},{id:'doi',l:'DOI',p:'',opt:true}],
+        'web':         [{id:'autor',l:'Autor/Org',p:''},{id:'fecha',l:'Fecha',p:''},{id:'titulo',l:'Título Web',p:''},{id:'sitio',l:'Sitio',p:''},{id:'url',l:'URL',p:''}],
+        'youtube':     [{id:'autor',l:'Canal',p:''},{id:'fecha',l:'Fecha',p:''},{id:'titulo',l:'Título Video',p:''},{id:'url',l:'URL',p:''}],
+        'ia':          [{id:'autor',l:'Autor',p:''},{id:'anio',l:'Año',p:''},{id:'modelo',l:'Modelo',p:'ChatGPT'},{id:'url',l:'URL',p:''}],
+        'tesis':       [{id:'autor',l:'Autor',p:'Apellido, N.'},{id:'anio',l:'Año',p:''},{id:'titulo',l:'Título de la tesis',p:''},{id:'nivelTesis',l:'Nivel (Ej: Tesis de maestría)',p:'Tesis de maestría'},{id:'institucion',l:'Institución',p:'Universidad de...'},{id:'pais',l:'País',p:'Chile',opt:true}],
+        'informe':     [{id:'autor',l:'Autor / Institución',p:'Apellido, N. o Organización'},{id:'anio',l:'Año',p:''},{id:'titulo',l:'Título del informe',p:''},{id:'numInforme',l:'N.º de informe',p:'Ej. Rep. N.º 5',opt:true},{id:'editorial',l:'Editorial / Institución',p:''}],
+        'conferencia': [{id:'autor',l:'Autor(es)',p:'Apellido, N.'},{id:'anio',l:'Año',p:''},{id:'titulo',l:'Título de la ponencia',p:''},{id:'evento',l:'Nombre del evento',p:''},{id:'ciudad',l:'Ciudad, País',p:'Ej. Santiago, Chile',opt:true}]
+    };
+
+    function gestor_actualizarFormulario() {
+        const tipo = document.getElementById('tipoRecurso').value;
+        const div = document.getElementById('camposDinamicos');
+        div.innerHTML = '';
+        if(!tipo || !gestor_campos[tipo]) return;
+        gestor_campos[tipo].forEach(c => {
+            div.innerHTML += `<div class="col-md-6"><label class="form-label">${c.l} ${c.opt?'<small class="text-muted">(Opcional)</small>':'<span class="req-star">*</span>'}</label><input type="text" class="form-control" id="g_${c.id}" placeholder="${c.p}"></div>`;
+        });
+    }
+
+    function limpiarDatosProfundo(titulo, autor, editorial, fecha) {
+        let t = titulo || ""; let a = autor || ""; let e = editorial || ""; let f = fecha || "";
+        t = t.replace(/\b(PKG|PGK|PACK|PACKAGE|&.*ACC.*|MYMATHLAB.*|ACCESS.*CARD|\+.*CD)\b/gi, ' ').trim();
+        t = t.replace(/^[\s&\-\+\.]+|[\s&\-\+\.]+$/g, '');
+        if (!/[a-z]/.test(t) && /[A-Z]/.test(t)) t = t.toLowerCase().replace(/(?:^|\s|["'([{])+\S/g, match => match.toUpperCase());
+        if (a && !/[a-z]/.test(a) && /[A-Z]/.test(a)) a = a.toLowerCase().replace(/(?:^|\s|["'([{])+\S/g, match => match.toUpperCase());
+        const yearMatch = f.match(/\b(19|20)\d{2}\b/); f = yearMatch ? yearMatch[0] : f;
+        // Solo borrar el autor si el campo completo ES una editorial (no si simplemente contiene la palabra)
+        // Un autor real tiene coma (Apellido, N.) o "&" entre varios. Una editorial no.
+        const autoresProhibidos = ['PEARSON', 'CENGAGE', 'MCGRAW-HILL', 'MCGRAW HILL', 'WILEY', 'OXFORD UNIVERSITY PRESS', 'EDITORIAL', 'PEARSON EDUCATION', 'ADDISON-WESLEY', 'PRENTICE HALL', 'PRENTICE-HALL'];
+        const aUpper = a.toUpperCase().trim();
+        const esEditorial = autoresProhibidos.some(bad => aUpper === bad || aUpper.startsWith(bad + ',') || aUpper.startsWith(bad + ' ') && !a.includes(','));
+        if (esEditorial) a = "";
+        return { titulo: t, autor: a, editorial: e, anio: f };
+    }
+
+    async function gestor_buscarMetadatos() {
+        const input = document.getElementById('inputMagic').value.trim();
+        const btn = document.getElementById('btnBuscar');
+        if(!input) return alert("Ingresa DOI o ISBN");
+        
+        btn.innerHTML = '⌛ Buscando...'; btn.disabled = true;
+        try {
+            const isDoi = input.includes('10.') && input.includes('/');
+            const clean = input.replace(/https?:\/\/(dx\.)?doi\.org\//, '').trim();
+            const cleanIsbn = input.replace(/[-\s]/g, '');
+            let data = null, tipo = '';
+
+            if(isDoi) {
+                try {
+                    const r = await fetch(`https://api.crossref.org/works/${clean}`);
+                    if(r.ok) {
+                        const j = (await r.json()).message;
+                        tipo = 'revista';
+                        data = { autor: j.author?.map(a=>`${a.family}, ${a.given?.[0]}.`).join(' & '), anio: j.published?.['date-parts']?.[0]?.[0], tituloArt: j.title?.[0], revista: j['container-title']?.[0], volumen: j.volume, numero: j.issue, paginas: j.page, doi: `https://doi.org/${j.DOI}` };
+                    } else throw new Error();
+                } catch(e) {
+                    const r2 = await fetch(`https://api.datacite.org/dois/${clean}`);
+                    if(!r2.ok) throw new Error("No encontrado");
+                    const j2 = (await r2.json()).data.attributes;
+                    tipo = 'revista';
+                    data = { tituloArt: j2.titles?.[0]?.title, autor: j2.creators?.map(c=>c.name).join(' & '), anio: j2.publicationYear, revista: j2.publisher || 'arXiv', doi: `https://doi.org/${j2.doi}` };
+                }
+            } else {
+                // Estrategia multicapa para ISBN:
+                // 1. OpenLibrary (mejor para ediciones latinoamericanas)
+                // 2. Google Books con restricción de idioma español
+                // 3. Google Books sin restricción (fallback general)
+
+                let rawData = null;
+
+                // --- Fuente 1: OpenLibrary ---
+                try {
+                    const rOL = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&jscmd=data&format=json`);
+                    const jOL = await rOL.json();
+                    const key = `ISBN:${cleanIsbn}`;
+                    if (jOL[key]) {
+                        const infoOL = jOL[key];
+                        const olData = limpiarDatosProfundo(
+                            infoOL.title,
+                            infoOL.authors?.map(a => a.name).join(' & '),
+                            infoOL.publishers?.[0]?.name,
+                            infoOL.publish_date
+                        );
+                        if (olData.titulo) rawData = { fuente: 'OL', ...olData };
+                    }
+                } catch(e) {}
+
+                // --- Fuente 2: Google Books con preferencia en español ---
+                if (!rawData || !rawData.autor) {
+                    try {
+                        let rG = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}&langRestrict=es`);
+                        let jG = await rG.json();
+                        // Si no hay resultado en español, buscar sin restricción
+                        if (!jG.items) {
+                            rG = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
+                            jG = await rG.json();
+                        }
+                        if (jG.items) {
+                            // Preferir el resultado cuyo idioma sea español si hay varios
+                            const items = jG.items;
+                            const esItem = items.find(it => it.volumeInfo?.language === 'es') || items[0];
+                            const info = esItem.volumeInfo;
+                            const gData = limpiarDatosProfundo(info.title, info.authors?.join(' & '), info.publisher, info.publishedDate);
+                            // Usar Google Books si OpenLibrary no tenía autor o no tenía título
+                            if (!rawData) {
+                                rawData = { fuente: 'GB', ...gData };
+                            } else {
+                                // Combinar: preferir el título/autor con más información
+                                if (!rawData.autor && gData.autor) rawData.autor = gData.autor;
+                                if (!rawData.anio  && gData.anio)  rawData.anio  = gData.anio;
+                                if (!rawData.editorial && gData.editorial) rawData.editorial = gData.editorial;
+                            }
+                        }
+                    } catch(e) {}
+                }
+
+                if (rawData && rawData.titulo) {
+                    tipo = 'libro';
+                    data = { titulo: rawData.titulo, autor: rawData.autor, anio: rawData.anio, editorial: rawData.editorial };
+                } else {
+                    throw new Error("ISBN no encontrado en ninguna fuente.");
+                }
+            }
+
+            if(data) {
+                document.getElementById('tipoRecurso').value = tipo;
+                gestor_actualizarFormulario();
+                setTimeout(() => { 
+                    for(let k in data) { 
+                        const el = document.getElementById(`g_${k}`); 
+                        if(el) {
+                            if(k === 'titulo' || k === 'tituloArt') el.value = limpiarDatosProfundo(data[k], '', '', '').titulo;
+                            else if(k === 'autor') el.value = limpiarDatosProfundo('', data[k], '', '').autor;
+                            else el.value = data[k] || ''; 
+                        }
+                    }
+                    // Rellenar ISBN automáticamente si vino de búsqueda por ISBN
+                    if (!isDoi) {
+                        const isbnEl = document.getElementById('g_isbn');
+                        if (isbnEl) isbnEl.value = cleanIsbn;
+                    }
+                    // Guardar en historial
+                    const tituloEncontrado = data.titulo || data.tituloArt || 'Sin título';
+                    gestor_agregarHistorial(input, tituloEncontrado);
+                    // Revisar el campo autor tal como quedó en pantalla (después de limpiar)
+                    const autorEnPantalla = document.getElementById('g_autor')?.value || '';
+                    if (autorEnPantalla === '') {
+                        alert("⚠️ El autor no se encontró en las fuentes consultadas. Por favor ingrésalo manualmente.");
+                    } else {
+                        alert("✅ ¡Datos encontrados!");
+                    }
+                }, 100);
+            }
+        } catch(e) { alert("Error: " + e.message); }
+        finally { btn.innerHTML = '🪄 Buscar y Rellenar'; btn.disabled = false; }
+    }
+
+    function gestor_agregarReferencia() {
+        const tipo = document.getElementById('tipoRecurso').value;
+        if(!tipo) return;
+        const getVal = (id) => { const el = document.getElementById(`g_${id}`); return el ? el.value.trim() : ''; };
+        let ref = '';
+
+        if (tipo === 'libro') {
+            ref = `${getVal('autor')} (${getVal('anio')}). <i>${getVal('titulo')}</i>. ${getVal('editorial')}.`;
+        } else if (tipo === 'capitulo') {
+            const pags = getVal('paginas') ? `, ${getVal('paginas')}` : '';
+            ref = `${getVal('autor')} (${getVal('anio')}). ${getVal('tituloCap')}. ${getVal('editor')}, <i>${getVal('tituloLibro')}</i>${pags}. `;
+        } else if (tipo === 'revista') {
+            ref = `${getVal('autor')} (${getVal('anio')}). ${getVal('tituloArt')}. <i>${getVal('revista')}</i>. ${getVal('doi')}`;
+        } else if (tipo === 'tesis') {
+            const pais = getVal('pais') ? `, ${getVal('pais')}` : '';
+            ref = `${getVal('autor')} (${getVal('anio')}). <i>${getVal('titulo')}</i> [${getVal('nivelTesis')}]. ${getVal('institucion')}${pais}.`;
+        } else if (tipo === 'informe') {
+            const num = getVal('numInforme') ? ` (${getVal('numInforme')})` : '';
+            ref = `${getVal('autor')} (${getVal('anio')}). <i>${getVal('titulo')}</i>${num}. ${getVal('editorial')}.`;
+        } else if (tipo === 'conferencia') {
+            const ciudad = getVal('ciudad') ? `, ${getVal('ciudad')}` : '';
+            ref = `${getVal('autor')} (${getVal('anio')}). <i>${getVal('titulo')}</i>. ${getVal('evento')}${ciudad}.`;
+        } else {
+            ref = `${getVal('autor')} (${getVal('fecha')||getVal('anio')}). <i>${getVal('titulo')||getVal('tituloCap')}</i>. ${getVal('url')}`;
+        }
+
+        ref = ref.trim().replace(/\s*\.+\s*\.+/g, '.');
+        if(!ref.endsWith('.')) ref += '.';
+        if(ref.startsWith(" (")) ref = ref.substring(1);
+
+        // ISBN: solo se captura si el campo existe (tipo libro)
+        const isbnEl = document.getElementById('g_isbn');
+        const isbn = isbnEl ? isbnEl.value.trim() : '';
+        
+        gestor_refs.push({ "Carrera":document.getElementById('g_carrera').value, "Clave":document.getElementById('g_clave').value, "Asignatura":document.getElementById('g_nombre').value, "Tipo":document.getElementById('tipoBiblio').value, "Referencia": ref, "ISBN": isbn });
+        gestor_renderTabla();
+        document.getElementById('camposDinamicos').innerHTML='';
+        document.getElementById('tipoRecurso').value='';
+    }
+
+    function gestor_renderTabla() {
+        const tbody = document.querySelector('#tablaGestor tbody');
+        tbody.innerHTML = '';
+        gestor_refs.forEach((r, i) => tbody.innerHTML += `
+            <tr>
+                <td>${r.Tipo}</td>
+                <td>${r.Referencia}</td>
+                <td><small class="text-muted">${r.ISBN || '—'}</small></td>
+                <td><button class="btn btn-sm btn-danger" onclick="gestor_eliminar(${i})">X</button></td>
+            </tr>`);
+    }
+    function gestor_eliminar(i) { gestor_refs.splice(i,1); gestor_renderTabla(); }
+
+    function gestor_exportarExcel() {
+        if(!gestor_refs.length) return alert("Sin datos");
+
+        const wb = XLSX.utils.book_new();
+        const ws = {};
+
+        // Detectar carrera (usar la primera no vacía)
+        const carrera = gestor_refs.find(r => r.Carrera && r.Carrera.trim())?.Carrera?.trim() || '';
+
+        // --- FILA 1: Carrera o Programa ---
+        ws['A1'] = { v: 'Carrera o Programa: ' + carrera, t: 's' };
+
+        // --- FILA 2: Encabezados principales ---
+        ws['A2'] = { v: 'Clave Asignatura',              t: 's' };
+        ws['B2'] = { v: 'Nombre Asignatura',             t: 's' };
+        ws['C2'] = { v: 'Tipo Bibliografía',             t: 's' };
+        ws['D2'] = { v: 'Referencias',                   t: 's' };
+        ws['E2'] = { v: 'Disponibilidad en Bibliotecas', t: 's' };
+        ws['J2'] = { v: 'Observaciones',                 t: 's' };
+        ws['K2'] = { v: 'Proveedor',                     t: 's' };
+        ws['L2'] = { v: 'Valor pesos',                   t: 's' };
+
+        // --- FILA 3: Sub-encabezados disponibilidad ---
+        ws['E3'] = { v: 'LIBROS N° de ejemplares (cantidad - año)',              t: 's' };
+        ws['I3'] = { v: 'Artículo Científico Disponible en (papel - on line)',   t: 's' };
+
+        // --- FILA 4: Sub-columnas E-H ---
+        ws['E4'] = { v: 'Btca UA',                t: 's' };
+        ws['F4'] = { v: 'Otras Btcas',            t: 's' };
+        ws['G4'] = { v: 'Total',                  t: 's' };
+        ws['H4'] = { v: 'Disponible on line URL', t: 's' };
+
+        // --- DATOS desde fila 5 ---
+        let fila = 5;
+
+        // Agrupar por asignatura — normalizar clave para evitar grupos separados por datos vacíos
+        const grupos = {};
+        gestor_refs.forEach(r => {
+            // Usar clave+asignatura, pero si alguna está vacía usar lo que haya
+            const clave      = (r.Clave      || '').trim();
+            const asignatura = (r.Asignatura || '').trim();
+            const key = clave + '||' + asignatura;
+            if (!grupos[key]) grupos[key] = {
+                clave,
+                asignatura,
+                basica:         [],
+                complementaria: []
+            };
+            if ((r.Tipo || '').toLowerCase().includes('comp')) {
+                grupos[key].complementaria.push(r);
+            } else {
+                grupos[key].basica.push(r);
+            }
+        });
+
+        Object.values(grupos).forEach(grupo => {
+            // Bloque BÁSICA
+            if (grupo.basica.length) {
+                ws[`C${fila}`] = { v: 'básica', t: 's' };
+                fila++;
+                grupo.basica.forEach(r => {
+                    const refLimpia = r.Referencia.replace(/<[^>]*>?/gm, '').replace(/\s*\.+\s*\.+/g, '.');
+                    ws[`A${fila}`] = { v: grupo.clave,      t: 's' };
+                    ws[`B${fila}`] = { v: grupo.asignatura, t: 's' };
+                    ws[`C${fila}`] = { v: '',               t: 's' };
+                    ws[`D${fila}`] = { v: refLimpia,        t: 's' };
+                    ws[`E${fila}`] = { v: '',               t: 's' };
+                    ws[`F${fila}`] = { v: '',               t: 's' };
+                    ws[`G${fila}`] = { v: '',               t: 's' };
+                    ws[`H${fila}`] = { v: r.ISBN || '',     t: 's' };
+                    fila++;
+                });
+                fila++;
+            }
+
+            // Bloque COMPLEMENTARIA
+            if (grupo.complementaria.length) {
+                ws[`C${fila}`] = { v: 'complementaria', t: 's' };
+                fila++;
+                grupo.complementaria.forEach(r => {
+                    const refLimpia = r.Referencia.replace(/<[^>]*>?/gm, '').replace(/\s*\.+\s*\.+/g, '.');
+                    ws[`A${fila}`] = { v: grupo.clave,      t: 's' };
+                    ws[`B${fila}`] = { v: grupo.asignatura, t: 's' };
+                    ws[`C${fila}`] = { v: '',               t: 's' };
+                    ws[`D${fila}`] = { v: refLimpia,        t: 's' };
+                    ws[`E${fila}`] = { v: '',               t: 's' };
+                    ws[`F${fila}`] = { v: '',               t: 's' };
+                    ws[`G${fila}`] = { v: '',               t: 's' };
+                    ws[`H${fila}`] = { v: r.ISBN || '',     t: 's' };
+                    fila++;
+                });
+                fila++;
+            }
+        });
+
+        // Ancho de columnas
+        ws['!cols'] = [
+            { wch: 16 }, // A Clave
+            { wch: 30 }, // B Asignatura
+            { wch: 16 }, // C Tipo
+            { wch: 70 }, // D Referencias
+            { wch: 12 }, // E Btca UA
+            { wch: 12 }, // F Otras Btcas
+            { wch: 10 }, // G Total
+            { wch: 25 }, // H Online/ISBN
+            { wch: 30 }, // I Art. Científico
+            { wch: 25 }, // J Observaciones
+            { wch: 18 }, // K Proveedor
+            { wch: 14 }, // L Valor
+        ];
+
+        // Fusiones de celdas
+        ws['!merges'] = [
+            { s:{r:0,c:0}, e:{r:0,c:11} }, // A1:L1 Carrera
+            { s:{r:1,c:4}, e:{r:1,c:8} },  // E2:I2 Disponibilidad
+            { s:{r:2,c:4}, e:{r:2,c:7} },  // E3:H3 LIBROS
+        ];
+
+        ws['!ref'] = `A1:L${fila}`;
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Bibliografías');
+        XLSX.writeFile(wb, `Bibliografia_${carrera || 'PUCV'}.xlsx`);
+    }
+</script>
+
+<script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+    let ext_datos = []; 
+    let ext_filesProcesados = new Set();
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.backgroundColor='#e6f0ff'; });
+    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.style.backgroundColor='#f8fbff'; });
+    dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.style.backgroundColor='#f8fbff'; ext_procesarArchivos(e.dataTransfer.files); });
+    fileInput.addEventListener('change', (e) => ext_procesarArchivos(e.target.files));
+
+    function ext_procesarArchivos(files) {
+        document.getElementById('statusLog').innerText = `Procesando ${files.length} archivos...`;
+        Array.from(files).forEach(file => {
+            if (ext_filesProcesados.has(file.name)) return;
+            ext_filesProcesados.add(file.name);
+            const reader = new FileReader();
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext === 'pdf') {
+                reader.onload = async function() {
+                    try {
+                        const typedarray = new Uint8Array(this.result);
+                        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                        let fullText = '';
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            // Reconstruir líneas agrupando por posición Y
+                            const items = textContent.items;
+                            let lastY = null, line = '';
+                            const lines = [];
+                            for (const item of items) {
+                                const y = Math.round(item.transform[5]);
+                                if (lastY !== null && Math.abs(y - lastY) > 3) {
+                                    if (line.trim()) lines.push(line.trim());
+                                    line = '';
+                                }
+                                line += item.str;
+                                lastY = y;
+                            }
+                            if (line.trim()) lines.push(line.trim());
+                            fullText += lines.join('\n') + '\n';
+                        }
+                        extraerYAcumular(fullText, file.name);
+                    } catch (e) {
+                        console.error(e);
+                        alert(`Error al leer "${file.name}": ${e.message}\n\nSi estás abriendo el archivo localmente (file://), el PDF no puede procesarse por restricciones del navegador. Usa la versión alojada en GitHub Pages.`);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (ext === 'docx') {
+                reader.onload = async function() {
+                    try {
+                        const result = await mammoth.convertToHtml({ arrayBuffer: this.result });
+                        extraerYAcumularDocx(result.value, file.name);
+                    } catch (e) {
+                        console.error(e);
+                        alert(`Error al leer "${file.name}": ${e.message}`);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                ext_filesProcesados.delete(file.name);
+                alert(`Formato no soportado: .${ext}\nSube programas de asignatura en PDF o Word (.docx).`);
+            }
+        });
+    }
+
+    // Extractor específico para DOCX — usa párrafos HTML para respetar estructura
+    function extraerYAcumularDocx(html, filename) {
+        // Parsear HTML a párrafos
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        const parrafos = Array.from(div.querySelectorAll('p, li')).map(el => el.textContent.trim()).filter(t => t.length > 0);
+
+        let carrera = '', clave = '', nombre = '';
+
+        // Detectar metadatos del documento
+        parrafos.forEach(p => {
+            if (/(?:Sigla|Código|Clave)[:\s,]+([A-Z]{2,4}\s*\d{3,5})/i.test(p)) {
+                const m = p.match(/(?:Sigla|Código|Clave)[:\s,]+([A-Z]{2,4}\s*\d{3,5})/i);
+                if (m) clave = m[1].trim();
+            }
+            if (/^Asignatura\s+([A-Z]{2,4}\s*\d{3,5})/i.test(p)) {
+                const m = p.match(/^Asignatura\s+([A-Z]{2,4}\s*\d{3,5})\s*[:\t]+\s*(.+)/i);
+                if (m) { clave = m[1].trim(); nombre = m[2].trim(); }
+            }
+            if (/(?:^|\s)Carrera[:\s]+(.+)/i.test(p) && !carrera) {
+                const m = p.match(/Carrera[:\s]+(.+)/i);
+                if (m) carrera = m[1].trim().substring(0, 60);
+            }
+        });
+
+        if (!nombre) nombre = filename.replace(/\.(pdf|docx)$/i, '').replace(/[-_]/g, ' ').trim();
+
+        // Encontrar sección bibliografía y procesar párrafo a párrafo
+        let enBiblio = false;
+        let tipoActual = 'Básica';
+
+        // FIX: detectar sección bibliografía incluso con número romano y texto extra
+        const esTituloBiblio = t => /(?:VII\.?\s*)?(?:BIBLIOGRAFÍA|Referencias\s+Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)(?:\s+Y\s+.+)?$/i.test(t);
+        // FIX: detectar subencabezados "Bibliografía Obligatoria:" y "Bibliografía Complementaria:"
+        const esTipoBasica   = t => /(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)/i.test(t);
+        const esTipoComp     = t => /(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
+        // FIX: limpiar viñetas (•, ●, *, -) antes de evaluar si es referencia
+        const limpiarLinea   = t => t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').trim();
+        const esReferencia   = t => {
+            const tc = limpiarLinea(t);
+            return tc.length > 30 && /\d{4}|s\.f\./.test(tc) && /^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}[,;]/.test(tc);
+        };
+
+        parrafos.forEach(p => {
+            if (esTituloBiblio(p)) { enBiblio = true; return; }
+            if (!enBiblio) return;
+            // Detener si llegamos a otra sección principal (VIII, IX, etc.)
+            if (/^(?:VIII|IX|X)\.\s+/i.test(p) || /^SOBRE\s+INTEGRIDAD/i.test(p)) { enBiblio = false; return; }
+
+            if (esTipoBasica(p))   { tipoActual = 'Básica';         return; }
+            if (esTipoComp(p))     { tipoActual = 'Complementaria'; return; }
+
+            if (esReferencia(p)) {
+                const refLimpia = limpiarLinea(p).replace(/\s*\.+\s*\.+/g, '.').trim();
+                ext_datos.push({ archivo: filename, carrera, clave, nombre, tipo: tipoActual, ref: refLimpia, status: validarCalidad(refLimpia) });
+            }
+        });
+
+        ext_updateView();
+    }
+
+    // FUNCIÓN CORE PARA PDF — procesa línea a línea respetando estructura
+    function extraerYAcumular(texto, filename) {
+        texto = texto.replace(/\r/g, '\n').replace(/\t/g, ' ');
+        const lineas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+        let carrera = '', clave = '', nombre = '';
+
+        lineas.forEach(l => {
+            if (!clave && /(?:Sigla|Código|Clave)[:\s,]+([A-Z]{2,4}\s*\d{3,5})/i.test(l)) {
+                const m = l.match(/(?:Sigla|Código|Clave)[:\s,]+([A-Z]{2,4}\s*\d{3,5})/i);
+                if (m) clave = m[1].trim();
+            }
+            if (!nombre && /(?:Nombre de la asignatura|Asignatura|Nombre del Curso)[:\s,"]+(.+)/i.test(l)) {
+                const m = l.match(/(?:Nombre de la asignatura|Asignatura|Nombre del Curso)[:\s,"]+(.+)/i);
+                if (m) nombre = m[1].trim().replace(/^"|"$/g, '').substring(0, 80);
+            }
+            if (!carrera && /Carrera[:\s]+(.+)/i.test(l)) {
+                const m = l.match(/Carrera[:\s]+(.+)/i);
+                if (m) carrera = m[1].trim().substring(0, 60);
+            }
+        });
+
+        if (!nombre || nombre.length > 100)
+            nombre = filename.replace(/\.(pdf|docx)$/i, '').replace(/[-_]/g, ' ').trim();
+
+        // Encontrar inicio de bibliografía — FIX: incluye "VII. BIBLIOGRAFÍA Y OTROS RECURSOS..."
+        let idxBiblio = -1;
+        for (let i = 0; i < lineas.length; i++) {
+            if (/^(?:VII\.?\s*)?(?:BIBLIOGRAFÍA|Referencias\s*Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)(?:\s+Y\s+.+)?$/i.test(lineas[i])) {
+                idxBiblio = i; break;
+            }
+        }
+        if (idxBiblio === -1) {
+            for (let i = 0; i < lineas.length; i++) {
+                if (/BIBLIOGRAFÍA|Referencias\s+Bibliográficas?/i.test(lineas[i])) {
+                    idxBiblio = i; break;
+                }
+            }
+        }
+        if (idxBiblio === -1) return;
+
+        // FIX: detectar subencabezados con "Bibliografía Obligatoria:" y "Bibliografía Complementaria:"
+        const esTipoBasica = t => /(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)/i.test(t);
+        const esTipoComp   = t => /(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
+        // FIX: limpiar viñetas (•, ●, ✔, etc.) del inicio de línea
+        const limpiarL = t => t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').trim();
+        // FIX: detectar fin de sección bibliografía
+        const esFin = t => /^(?:VIII|IX|X|XI)\.\s+/i.test(t)
+            || /^SOBRE\s+INTEGRIDAD/i.test(t)
+            || /^ACAD[EÉ]MICO\s+RESPONSABLE/i.test(t)
+            || /Otros\s+materiales\s+de\s+apoyo/i.test(t);
+
+        let tipoActual = 'Básica';
+        let refActual  = '';
+
+        const guardarRef = () => {
+            if (refActual.length > 30) {
+                const limpia = refActual.replace(/\s*\.+\s*\.+/g, '.').trim();
+                ext_datos.push({ archivo: filename, carrera, clave, nombre, tipo: tipoActual, ref: limpia, status: validarCalidad(limpia) });
+            }
+            refActual = '';
+        };
+
+        for (let i = idxBiblio + 1; i < lineas.length; i++) {
+            const l = lineas[i];
+            if (esFin(l)) { guardarRef(); break; }
+            if (esTipoBasica(l)) { guardarRef(); tipoActual = 'Básica';         continue; }
+            if (esTipoComp(l))   { guardarRef(); tipoActual = 'Complementaria'; continue; }
+
+            // FIX PRINCIPAL: usar la viñeta '•' o '●' como delimitador de referencia nueva.
+            // Marzal no tiene año en la primera línea, así que no podemos depender del año
+            // para detectar el inicio — el bullet ES el separador confiable.
+            if (/^[•●]/.test(l)) {
+                // Nueva referencia: guardar la anterior y empezar acumulando esta
+                if (refActual.length > 0) guardarRef();
+                const lc = limpiarL(l);
+                if (lc.length > 5) refActual = lc;
+            } else {
+                // Línea de continuación (ej: segunda línea de Marzal)
+                const lc = l.trim();
+                if (lc.length > 5 && refActual.length > 0) refActual += ' ' + lc;
+            }
+        }
+        guardarRef();
+        ext_updateView();
+    }
+
+    function validarCalidad(ref) {
+        if (ref.match(/EUR\s*\d+/) || ref.match(/US\$\d+/) || ref.includes("PLIT")) return { level: 'error', msg: "⚠️ Precio/Basura" };
+        const tieneAnio = /\b(19|20)\d{2}\b|\(s\.?f\.?\)/.test(ref);
+        if (!tieneAnio) return { level: 'warning', msg: "⚠️ Falta Año" };
+        if (/^\s*\(?\d{4}\)?/.test(ref) || /^\s*:/.test(ref) || /^\s*-/.test(ref)) return { level: 'warning', msg: "⚠️ ¿Falta Autor?" };
+        return { level: 'success', msg: "✅ OK" };
+    }
+
+    function ext_updateView() {
+        const tbody = document.getElementById('tablaExtractorBody');
+        if(ext_datos.length) tbody.innerHTML = '';
+        else tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Esperando datos...</td></tr>';
+
+        // Mostrar agrupado por asignatura en la tabla
+        const grupos = {};
+        ext_datos.forEach((d, i) => {
+            const key = (d.clave || '—') + '||' + (d.nombre || '—');
+            if (!grupos[key]) grupos[key] = { clave: d.clave, nombre: d.nombre, items: [] };
+            grupos[key].items.push({ ...d, idx: i });
+        });
+
+        Object.values(grupos).forEach(grupo => {
+            // Fila separadora de asignatura
+            tbody.innerHTML += `
+                <tr style="background:#e9ecef;">
+                    <td colspan="4">
+                        <strong>${grupo.clave || '—'}</strong> · ${grupo.nombre || '—'}
+                        <span class="badge bg-secondary ms-2">${grupo.items.length} refs</span>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-xs btn-outline-secondary btn-sm py-0 px-1" style="font-size:.75rem;"
+                            onclick="ext_editarAsignatura('${(grupo.clave+'||'+grupo.nombre).replace(/'/g,"\\'")}')">
+                            ✏️ Editar
+                        </button>
+                    </td>
+                </tr>`;
+            // Filas de referencias del grupo
+            grupo.items.forEach(d => {
+                let clase = d.status.level === 'success' ? 'row-ok' : (d.status.level === 'warning' ? 'row-warning' : 'row-error');
+                tbody.innerHTML += `<tr class="${clase}">
+                    <td><small class="text-muted">${d.archivo}</small></td>
+                    <td><small>${d.nombre}</small></td>
+                    <td><span class="badge bg-secondary">${d.tipo}</span></td>
+                    <td><small>${d.ref}</small></td>
+                    <td><small>${d.status.msg}</small></td>
+                </tr>`;
+            });
+        });
+
+        // Resumen tarjetas por asignatura
+        const resumenLista = document.getElementById('ext_resumenLista');
+        resumenLista.innerHTML = '';
+        Object.values(grupos).forEach(grupo => {
+            const bas  = grupo.items.filter(d => d.tipo !== 'Complementaria').length;
+            const comp = grupo.items.filter(d => d.tipo === 'Complementaria').length;
+            resumenLista.innerHTML += `
+                <div class="card border-secondary" style="min-width:200px; max-width:260px;">
+                    <div class="card-body py-2 px-3">
+                        <div class="fw-bold small">${grupo.clave || '—'}</div>
+                        <div class="text-muted small text-truncate" title="${grupo.nombre}">${grupo.nombre || '—'}</div>
+                        <div class="mt-1 d-flex gap-2">
+                            <span class="badge bg-primary">${bas} Básica</span>
+                            <span class="badge bg-secondary">${comp} Compl.</span>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        document.getElementById('ext_resumenAsignaturas').style.display = ext_datos.length ? 'block' : 'none';
+
+        document.getElementById('badgeArchivos').innerText = ext_filesProcesados.size + " Archivos";
+        document.getElementById('badgeRefs').innerText = ext_datos.length + " Refs";
+        document.getElementById('btnDescargarExt').classList.remove('disabled');
+        document.getElementById('btnEnviarGestor').classList.remove('disabled');
+        document.getElementById('statusLog').innerText = "Procesamiento completo. " + Object.keys(grupos).length + " asignatura(s) detectada(s).";
+    }
+
+    function ext_editarAsignatura(key) {
+        const [claveActual, nombreActual] = key.split('||');
+        const nuevaClave  = prompt('Clave de asignatura:', claveActual === '—' ? '' : claveActual);
+        if (nuevaClave === null) return;
+        const nuevoNombre = prompt('Nombre de asignatura:', nombreActual === '—' ? '' : nombreActual);
+        if (nuevoNombre === null) return;
+        // Actualizar todos los registros de ese grupo
+        ext_datos.forEach(d => {
+            if ((d.clave || '—') === claveActual && (d.nombre || '—') === nombreActual) {
+                d.clave  = nuevaClave.trim();
+                d.nombre = nuevoNombre.trim();
+            }
+        });
+        ext_updateView();
+    }
+
+    function ext_reiniciarTodo() {
+        if(!confirm("¿Borrar todo?")) return;
+        ext_datos=[]; ext_filesProcesados.clear();
+        document.getElementById('tablaExtractorBody').innerHTML='<tr><td colspan="5" class="text-center text-muted">Esperando...</td></tr>';
+        document.getElementById('badgeArchivos').innerText="0"; document.getElementById('badgeRefs').innerText="0";
+        document.getElementById('btnDescargarExt').classList.add('disabled');
+        document.getElementById('btnEnviarGestor').classList.add('disabled');
+    }
+
+    function ext_enviarAlGestor() {
+        if (!ext_datos.length) return;
+        let agregados = 0;
+        ext_datos.forEach(d => {
+            // Evitar duplicados por referencia
+            const existe = gestor_refs.some(r => r.Referencia === d.ref);
+            if (!existe) {
+                gestor_refs.push({
+                    Carrera:    d.carrera  || '',
+                    Clave:      d.clave    || '',
+                    Asignatura: d.nombre   || '',
+                    Tipo:       d.tipo,
+                    Referencia: d.ref,
+                    ISBN:       ''
+                });
+                agregados++;
+            }
+        });
+        gestor_renderTabla();
+        alert(`✅ ${agregados} referencia(s) enviadas al Gestor Principal.${agregados < ext_datos.length ? `\n(${ext_datos.length - agregados} ya existían y no se duplicaron)` : ''}`);
+        document.getElementById('gestor-tab').click();
+    }
+
+    function ext_exportarExcel() {
+        if(!ext_datos.length) return;
+        const wb = XLSX.utils.book_new();
+        const ws = {};
+
+        // Detectar carrera
+        const carrera = ext_datos.find(d => d.carrera)?.carrera || '';
+
+        // Encabezados formato oficial
+        ws['A1'] = { v: 'Carrera o Programa: ' + carrera, t: 's' };
+        ws['A2'] = { v: 'Clave Asignatura',              t: 's' };
+        ws['B2'] = { v: 'Nombre Asignatura',             t: 's' };
+        ws['C2'] = { v: 'Tipo Bibliografía',             t: 's' };
+        ws['D2'] = { v: 'Referencias',                   t: 's' };
+        ws['E2'] = { v: 'Disponibilidad en Bibliotecas', t: 's' };
+        ws['J2'] = { v: 'Observaciones',                 t: 's' };
+        ws['K2'] = { v: 'Proveedor',                     t: 's' };
+        ws['L2'] = { v: 'Valor pesos',                   t: 's' };
+        ws['E3'] = { v: 'LIBROS N° de ejemplares (cantidad - año)',            t: 's' };
+        ws['I3'] = { v: 'Artículo Científico Disponible en (papel - on line)', t: 's' };
+        ws['E4'] = { v: 'Btca UA',                t: 's' };
+        ws['F4'] = { v: 'Otras Btcas',            t: 's' };
+        ws['G4'] = { v: 'Total',                  t: 's' };
+        ws['H4'] = { v: 'Disponible on line URL', t: 's' };
+
+        let fila = 5;
+
+        // Agrupar por asignatura
+        const grupos = {};
+        ext_datos.forEach(d => {
+            const key = (d.clave || '') + '||' + (d.nombre || '');
+            if (!grupos[key]) grupos[key] = { clave: d.clave || '', asignatura: d.nombre || '', basica: [], complementaria: [] };
+            if (d.tipo === 'Complementaria') grupos[key].complementaria.push(d);
+            else grupos[key].basica.push(d);
+        });
+
+        Object.values(grupos).forEach(grupo => {
+            if (grupo.basica.length) {
+                ws[`C${fila}`] = { v: 'básica', t: 's' };
+                fila++;
+                grupo.basica.forEach(d => {
+                    ws[`A${fila}`] = { v: grupo.clave,      t: 's' };
+                    ws[`B${fila}`] = { v: grupo.asignatura, t: 's' };
+                    ws[`C${fila}`] = { v: '',               t: 's' };
+                    ws[`D${fila}`] = { v: d.ref,            t: 's' };
+                    ws[`E${fila}`] = { v: '', t: 's' }; ws[`F${fila}`] = { v: '', t: 's' }; ws[`G${fila}`] = { v: '', t: 's' }; ws[`H${fila}`] = { v: '', t: 's' };
+                    fila++;
+                });
+                fila++;
+            }
+            if (grupo.complementaria.length) {
+                ws[`C${fila}`] = { v: 'complementaria', t: 's' };
+                fila++;
+                grupo.complementaria.forEach(d => {
+                    ws[`A${fila}`] = { v: grupo.clave,      t: 's' };
+                    ws[`B${fila}`] = { v: grupo.asignatura, t: 's' };
+                    ws[`C${fila}`] = { v: '',               t: 's' };
+                    ws[`D${fila}`] = { v: d.ref,            t: 's' };
+                    ws[`E${fila}`] = { v: '', t: 's' }; ws[`F${fila}`] = { v: '', t: 's' }; ws[`G${fila}`] = { v: '', t: 's' }; ws[`H${fila}`] = { v: '', t: 's' };
+                    fila++;
+                });
+                fila++;
+            }
+        });
+
+        ws['!cols'] = [{wch:16},{wch:30},{wch:16},{wch:70},{wch:12},{wch:12},{wch:10},{wch:25},{wch:30},{wch:25},{wch:18},{wch:14}];
+        ws['!merges'] = [
+            { s:{r:0,c:0}, e:{r:0,c:11} },
+            { s:{r:1,c:4}, e:{r:1,c:8} },
+            { s:{r:2,c:4}, e:{r:2,c:7} },
+        ];
+        ws['!ref'] = `A1:L${fila}`;
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Bibliografías');
+        XLSX.writeFile(wb, `Extractor_${carrera || 'Bibliografía'}.xlsx`);
+    }
+</script>
+
+<script>
+    let imp_referencias = [];
+    const dropZoneImport = document.getElementById('dropZoneImport');
+    const fileInputImport = document.getElementById('fileInputImport');
+
+    dropZoneImport.addEventListener('dragover', (e) => { e.preventDefault(); dropZoneImport.style.backgroundColor='#e0d8ff'; });
+    dropZoneImport.addEventListener('dragleave', (e) => { e.preventDefault(); dropZoneImport.style.backgroundColor='#f3f0ff'; });
+    dropZoneImport.addEventListener('drop', (e) => { e.preventDefault(); dropZoneImport.style.backgroundColor='#f3f0ff'; imp_procesarArchivo(e.dataTransfer.files[0]); });
+    fileInputImport.addEventListener('change', (e) => imp_procesarArchivo(e.target.files[0]));
+
+    function imp_procesarArchivo(file) {
+        if(!file) return;
+        const reader = new FileReader();
+        const ext = file.name.split('.').pop().toLowerCase();
+        reader.onload = (e) => {
+            const content = e.target.result;
+            if(ext === 'ris') imp_referencias = imp_parseRIS(content);
+            else if(ext === 'bib') imp_referencias = imp_parseBibTeX(content);
+            else { alert("Formato no soportado. Use .RIS o .BIB"); return; }
+            imp_renderTabla();
+        };
+        reader.readAsText(file);
+    }
+
+    function imp_parseRIS(content) {
+        const entries = content.split(/ER\s{1,2}-/);
+        return entries.map(entry => {
+            if(!entry.trim()) return null;
+            const getField = (tag) => {
+                const match = entry.match(new RegExp(`^${tag}\\s{1,2}-\\s+(.*)$`, "m"));
+                return match ? match[1].trim() : null;
+            };
+            const authors = [];
+            const auRegex = /^AU\s{1,2}-\s+(.*)$/gm;
+            let m; while((m = auRegex.exec(entry)) !== null) authors.push(m[1]);
+            return { titulo: getField('TI') || getField('T1') || "Sin título", autores: authors, anio: (getField('PY') || getField('Y1') || "s.f.").substring(0,4), fuente: getField('PB') || getField('JA') || "" };
+        }).filter(r => r !== null);
+    }
+
+    function imp_parseBibTeX(content) {
+        const rawEntries = content.split('@');
+        return rawEntries.map(entry => {
+            if (!entry.trim() || entry.trim().startsWith('comment')) return null;
+            const extract = (key) => { const match = entry.match(new RegExp(`${key}\\s*=\\s*[{"'](.*?)["'}]`, "i")); return match ? match[1] : null; };
+            const autoresStr = extract('author');
+            return { titulo: extract('title') || "Sin título", autores: autoresStr ? autoresStr.split(' and ').map(a => a.trim()) : [], anio: extract('year') || "s.f.", fuente: extract('journal') || extract('publisher') || "" };
+        }).filter(r => r !== null);
+    }
+
+    function imp_generarAPA(ref) {
+        const autoresFmt = ref.autores.map(a => {
+            if(a.includes(',')) { const p = a.split(','); return `${p[0]}, ${p[1].trim().charAt(0)}.`; }
+            return a;
+        }).join(' & ');
+        return `${autoresFmt} (${ref.anio}). <i>${ref.titulo}</i>. ${ref.fuente}.`;
+    }
+
+    function imp_renderTabla() {
+        const tbody = document.getElementById('tablaImportadorBody');
+        const resultsDiv = document.getElementById('importResults');
+        tbody.innerHTML = '';
+
+        if (imp_referencias.length > 0) {
+            resultsDiv.style.display = 'block';
+            document.getElementById('imp_badge').textContent = imp_referencias.length;
+            imp_referencias.forEach((ref, idx) => {
+                const cita = imp_generarAPA(ref);
+                const citaClean = cita.replace(/<i>|<\/i>/g, '');
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="text-center">
+                            <input type="checkbox" id="imp_chk_${idx}" checked style="width:16px;height:16px;cursor:pointer;">
+                        </td>
+                        <td><small>${cita}</small></td>
+                        <td>
+                            <select class="form-select form-select-sm" id="imp_tipo_${idx}" style="min-width:130px;">
+                                <option value="Básica">Básica</option>
+                                <option value="Complementaria">Complementaria</option>
+                            </select>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-secondary py-0" onclick="imp_copiar('${citaClean.replace(/'/g, "\\'")}')">📋</button>
+                        </td>
+                    </tr>`;
+            });
+        }
+    }
+
+    function imp_seleccionarTodas() {
+        imp_referencias.forEach((_, idx) => {
+            const chk = document.getElementById(`imp_chk_${idx}`);
+            if (chk) chk.checked = true;
+        });
+    }
+
+    function imp_deseleccionarTodas() {
+        imp_referencias.forEach((_, idx) => {
+            const chk = document.getElementById(`imp_chk_${idx}`);
+            if (chk) chk.checked = false;
+        });
+    }
+
+    function imp_aplicarTipoGlobal(tipo) {
+        imp_referencias.forEach((_, idx) => {
+            const el = document.getElementById(`imp_tipo_${idx}`);
+            if (el) el.value = tipo;
+        });
+    }
+
+    function imp_copiar(texto) { navigator.clipboard.writeText(texto); alert("¡Copiado!"); }
+
+    function imp_copiarTodas() {
+        const todas = imp_referencias.map(r => imp_generarAPA(r).replace(/<i>|<\/i>/g, '')).join('\n\n');
+        navigator.clipboard.writeText(todas);
+        alert("¡Copiado!");
+    }
+
+    function imp_enviarAlGestor() {
+        if (!imp_referencias.length) return alert('No hay referencias para enviar.');
+        const carrera    = document.getElementById('imp_carrera').value.trim();
+        const clave      = document.getElementById('imp_clave').value.trim();
+        const asignatura = document.getElementById('imp_asignatura').value.trim();
+
+        // Solo las que tienen checkbox marcado
+        let agregados = 0;
+        let seleccionadas = 0;
+        imp_referencias.forEach((ref, idx) => {
+            const chk = document.getElementById(`imp_chk_${idx}`);
+            if (!chk || !chk.checked) return;
+            seleccionadas++;
+            const cita   = imp_generarAPA(ref);
+            const tipoEl = document.getElementById(`imp_tipo_${idx}`);
+            const tipo   = tipoEl ? tipoEl.value : 'Básica';
+            const existe = gestor_refs.some(r => r.Referencia === cita);
+            if (!existe) {
+                gestor_refs.push({ Carrera: carrera, Clave: clave, Asignatura: asignatura, Tipo: tipo, Referencia: cita, ISBN: '' });
+                agregados++;
+            }
+        });
+
+        if (!seleccionadas) return alert('No hay referencias seleccionadas. Marca al menos una.');
+        gestor_renderTabla();
+        alert(`✅ ${agregados} referencia(s) enviadas al Gestor.\n\nAhora cambia la asignatura y selecciona el siguiente grupo.`);
+        document.getElementById('gestor-tab').click();
+    }
+</script>
+
+<script>
+// ============================================================
+// PANEL DE DISPONIBILIDAD PUCV
+// ============================================================
+let disp_items = [];
+const OPAC_BASE = 'https://catalogo.pucv.cl/cgi-bin/koha/opac-search.pl?q=';
+
+const DISP_ESTADOS = {
+    'sin':        { label: '⬜ Sin verificar',       cls: '' },
+    'disponible': { label: '✅ Disponible',           cls: 'table-success' },
+    'prestado':   { label: '🟡 Prestado / Revisar',  cls: 'table-warning' },
+    'noesta':     { label: '🔴 No está en catálogo', cls: 'table-danger' },
+};
+
+
+function disp_agregarManual() {
+    const titulo = document.getElementById('disp_titulo').value.trim();
+    const autor  = document.getElementById('disp_autor').value.trim();
+    const anio   = document.getElementById('disp_anio').value.trim();
+    if (!titulo) return alert('El título es obligatorio.');
+    disp_items.push({ titulo, autor, anio, estado: 'sin' });
+    document.getElementById('disp_titulo').value = '';
+    document.getElementById('disp_autor').value  = '';
+    document.getElementById('disp_anio').value   = '';
+    disp_renderTabla();
+}
+
+function disp_cargarDesdeGestor() {
+    if (!gestor_refs.length) return alert('El Gestor Principal no tiene referencias cargadas aún.');
+    let agregados = 0;
+    gestor_refs.forEach(r => {
+        const ref = r.Referencia || '';
+        const refLimpia = ref.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+
+        // Extraer autor: antes del primer "("
+        const matchAutor = refLimpia.match(/^\s*([^(]+)\s*\(/);
+        const autor = matchAutor ? matchAutor[1].trim() : '';
+
+        // Extraer año
+        const matchAnio = refLimpia.match(/\((\d{4})\)/);
+        const anio = matchAnio ? matchAnio[1] : '';
+
+        // Extraer título:
+        // 1. Si tiene etiqueta <i> (referencias del Gestor manual)
+        const matchTituloHTML = ref.match(/<i>([^<]+)<\/i>/);
+        let titulo = matchTituloHTML ? matchTituloHTML[1].trim() : '';
+
+        // 2. Si no tiene <i> (referencias del Extractor), tomar todo lo que va
+        //    después de "(año)" con cualquier separador (. : – -)
+        //    hasta el siguiente ". Mayúscula+minúscula" que indica ciudad/editorial
+        if (!titulo) {
+            const despuesAnio = refLimpia.replace(/^.+?\(\d{4}\)[.:\s–\-]+/, '');
+            const cortarEn = despuesAnio.search(/\.\s+[A-Z][a-z]/);
+            titulo = cortarEn > 0 ? despuesAnio.substring(0, cortarEn).trim() : despuesAnio.split(/[.:]/)[0].trim();
+        }
+
+        // 3. Fallback final: usar toda la referencia limpia sin autor y año
+        if (!titulo) {
+            titulo = refLimpia.replace(/^[^(]+\(\d{4}\)\.\s*/, '').substring(0, 100);
+        }
+
+        if (!titulo) return;
+
+        // Evitar duplicados
+        const tituloNorm = titulo.toLowerCase().replace(/\s+/g, ' ');
+        const existe = disp_items.some(i => i.titulo.toLowerCase().replace(/\s+/g, ' ') === tituloNorm);
+        if (!existe) { disp_items.push({ titulo, autor, anio, estado: 'sin' }); agregados++; }
+    });
+    disp_renderTabla();
+    alert(`\u2705 ${agregados} libro(s) importados desde el Gestor.`);
+}
+
+function disp_buscarEnCatalogo(idx) {
+    const item = disp_items[idx];
+    // Normalizar texto para KOHA — apóstrofe a espacio, luego quitar tildes
+    function disp_normalizarQuery(texto) {
+        return texto
+            .replace(/[''´`]/g, ' ')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9\s]/g, ' ')
+            .replace(/\s+/g, ' ').trim();
+    }
+
+    // Query formato KOHA: apellido AND palabra1 AND palabra2
+    function disp_construirQuery(titulo, autor) {
+        const stopwords = new Set(['de','la','le','les','du','des','el','los','las','the','a','an','en','et','of','in','sur','d','y','con','por','un','una','al','del','Histoire','historia']);
+        const apellido = autor ? disp_normalizarQuery(autor.split(',')[0].trim()) : '';
+        const palabras = disp_normalizarQuery(titulo)
+            .split(' ')
+            .filter(p => p.length > 3 && !stopwords.has(p.toLowerCase()))
+            .slice(0, 1);
+        return [apellido, ...palabras].filter(Boolean).join(' & ');
+    }
+
+    // Buscar con formato AND
+    const query = disp_construirQuery(item.titulo, item.autor);
+    const url = OPAC_BASE + encodeURIComponent(query);
+    window.open(url, '_blank');
+}
+
+function disp_setEstado(idx, estado) {
+    disp_items[idx].estado = estado;
+    disp_renderTabla();
+}
+
+function disp_eliminar(idx) {
+    disp_items.splice(idx, 1);
+    disp_renderTabla();
+}
+
+function disp_renderTabla() {
+    const tbody = document.getElementById('disp_tbody');
+    tbody.innerHTML = '';
+
+    if (disp_items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Aún no hay libros en la lista. Agrega uno arriba o importa desde el Gestor.</td></tr>';
+        document.getElementById('disp_resumen').style.display = 'none';
+        return;
+    }
+
+    disp_items.forEach((item, idx) => {
+        const estadoInfo = DISP_ESTADOS[item.estado];
+        tbody.innerHTML += `
+            <tr class="${estadoInfo.cls}">
+                <td><strong>${item.titulo}</strong></td>
+                <td>${item.autor || '<span class="text-muted">—</span>'}</td>
+                <td>${item.anio || '<span class="text-muted">—</span>'}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary w-100" onclick="disp_buscarEnCatalogo(${idx})" title="Abre el catálogo PUCV con esta búsqueda">
+                        🔍 Buscar
+                    </button>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm" onchange="disp_setEstado(${idx}, this.value)">
+                        <option value="sin"        ${item.estado==='sin'        ?'selected':''}>⬜ Sin verificar</option>
+                        <option value="disponible" ${item.estado==='disponible' ?'selected':''}>✅ Disponible</option>
+                        <option value="prestado"   ${item.estado==='prestado'   ?'selected':''}>🟡 Prestado</option>
+                        <option value="noesta"     ${item.estado==='noesta'     ?'selected':''}>🔴 No está</option>
+                    </select>
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-danger" onclick="disp_eliminar(${idx})">✕</button>
+                </td>
+            </tr>`;
+    });
+
+    // Actualizar contadores del resumen
+    const cnts = { disponible:0, prestado:0, noesta:0, sin:0 };
+    disp_items.forEach(i => cnts[i.estado]++);
+    document.getElementById('disp_cnt_disponible').textContent = cnts.disponible;
+    document.getElementById('disp_cnt_prestado').textContent   = cnts.prestado;
+    document.getElementById('disp_cnt_noesta').textContent     = cnts.noesta;
+    document.getElementById('disp_cnt_sin').textContent        = cnts.sin;
+    document.getElementById('disp_resumen').style.display      = 'block';
+}
+
+function disp_exportarExcel() {
+    if (!disp_items.length) return alert('No hay datos para exportar.');
+    const estadoTexto = { sin:'Sin verificar', disponible:'Disponible', prestado:'Prestado / Revisar', noesta:'No está en catálogo' };
+    const datos = disp_items.map(i => ({
+        'Título':          i.titulo,
+        'Autor':           i.autor  || '',
+        'Año':             i.anio   || '',
+        'Disponibilidad':  estadoTexto[i.estado],
+        'URL Catálogo':    OPAC_BASE + encodeURIComponent(disp_construirQuery(i.titulo, i.autor))
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(datos), 'Disponibilidad PUCV');
+    XLSX.writeFile(wb, 'Disponibilidad_Bibliografica_PUCV.xlsx');
+}
+
+function disp_limpiar() {
+    if (!confirm('¿Limpiar toda la lista de disponibilidad?')) return;
+    disp_items = [];
+    disp_renderTabla();
+}
+</script>
+
+
+</body>
+</html>
