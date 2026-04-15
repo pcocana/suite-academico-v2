@@ -944,6 +944,7 @@
                     ws[`F${fila}`] = { v: '',               t: 's' };
                     ws[`G${fila}`] = { v: '',               t: 's' };
                     ws[`H${fila}`] = { v: r.ISBN || '',     t: 's' };
+                    if (r.Observaciones) ws[`J${fila}`] = { v: r.Observaciones, t: 's' };
                     fila++;
                 });
                 fila++;
@@ -963,6 +964,7 @@
                     ws[`F${fila}`] = { v: '',               t: 's' };
                     ws[`G${fila}`] = { v: '',               t: 's' };
                     ws[`H${fila}`] = { v: r.ISBN || '',     t: 's' };
+                    if (r.Observaciones) ws[`J${fila}`] = { v: r.Observaciones, t: 's' };
                     fila++;
                 });
                 fila++;
@@ -1028,11 +1030,11 @@
                         for (let i = 1; i <= pdf.numPages; i++) {
                             const page = await pdf.getPage(i);
                             const textContent = await page.getTextContent();
-                            // Reconstruir líneas agrupando por posición Y
-                            const items = textContent.items;
+                            // Reconstruir líneas agrupando por posición Y (con guard para items sin transform)
                             let lastY = null, line = '';
                             const lines = [];
-                            for (const item of items) {
+                            for (const item of textContent.items) {
+                                if (!item.transform || typeof item.str !== 'string') continue;
                                 const y = Math.round(item.transform[5]);
                                 if (lastY !== null && Math.abs(y - lastY) > 3) {
                                     if (line.trim()) lines.push(line.trim());
@@ -1047,7 +1049,7 @@
                         extraerYAcumular(fullText, file.name);
                     } catch (e) {
                         console.error(e);
-                        alert(`Error al leer "${file.name}": ${e.message}\n\nSi estás abriendo el archivo localmente (file://), el PDF no puede procesarse por restricciones del navegador. Usa la versión alojada en GitHub Pages.`);
+                        alert(`Error al leer "${file.name}": ${e.message}`);
                     }
                 };
                 reader.readAsArrayBuffer(file);
@@ -1109,30 +1111,63 @@
         // Encontrar sección bibliografía y procesar párrafo a párrafo
         let enBiblio = false;
         let tipoActual = 'Básica';
+        let enTipo = false; // si ya detectamos al menos un marcador Básica/Complementaria
 
-        // FIX: detectar sección bibliografía incluso con número romano y texto extra
-        const esTituloBiblio = t => /(?:VII\.?\s*)?(?:BIBLIOGRAFÍA|Referencias\s+Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)(?:\s+Y\s+.+)?$/i.test(t);
-        // FIX: detectar subencabezados "Bibliografía Obligatoria:" y "Bibliografía Complementaria:"
-        const esTipoBasica   = t => /(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)/i.test(t);
-        const esTipoComp     = t => /(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
-        // FIX: limpiar viñetas (•, ●, *, -) antes de evaluar si es referencia
-        const limpiarLinea   = t => t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').trim();
-        const esReferencia   = t => {
-            const tc = limpiarLinea(t);
-            return tc.length > 30 && /\d{4}|s\.f\./.test(tc) && /^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}[,;]/.test(tc);
+        const esTituloBiblio = t => /(?:VI{1,3}\.?\s*)?(?:BIBLIOGRAFÍA|Referencias\s+Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)(?:\s+Y\s+.+)?$/i.test(t);
+        const esTipoBasica   = t => /(?:\d+\.\s*)?(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)/i.test(t);
+        const esTipoComp     = t => /(?:\d+\.\s*)?(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
+        const limpiarLinea   = t => t.replace(/^[\s•●\-\*✔✓►▪▸◆◉\d\.]+/, '').trim();
+
+        // Detección estricta: APA con año (Apellido, Nombre. Título. Editorial, 2020.)
+        const esRefEstricta = t => {
+            const tc = t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').trim();
+            return tc.length > 35 && /\d{4}|s\.f\./.test(tc) && /^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}[,;]/.test(tc);
+        };
+
+        // Detección laxa: cualquier línea sustancial tras un marcador Básica/Complementaria
+        // cubre formatos como "Nombre Apellido, Título, Editorial." sin año
+        const esRefLaxa = t => {
+            const tc = t.replace(/^[\s•●\-\*✔✓►▪▸◆◉\d\.]+/, '').trim();
+            const tn = tc.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            if (tc.length <= 35) return false;
+            if (/^https?:\/\/|^www\.|^ftp:/i.test(tc)) return false;      // URLs
+            if (/^\d+\.\s+[A-ZÁÉÍÓÚ]/.test(tc)) return false;             // "1. Recursos Didácticos"
+            if (/^(?:Materiales|Cuaderno|Hojas|Data\s+show|Laboratorio|Aula|Apuntes|Sitio\s+web|Computador)/i.test(tc)) return false;
+            // Excluir explícitamente líneas de firma y secciones finales
+            if (tn.startsWith('academico responsable')) return false;
+            if (tn.startsWith('fecha de ')) return false;
+            if (tn.includes('webgraf')) return false;
+            if (/^Otros\s+materiales/i.test(tc)) return false;
+            return true;
+        };
+
+        // Condiciones de parada
+        const esFin = t => {
+            // Normalizar para evitar problemas de codificación de tildes
+            const tn = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            return /^(?:VIII|IX|X{1,3})\.\s+/i.test(t)
+                || /^SOBRE\s+INTEGRIDAD/i.test(t)
+                || tn.startsWith('academico responsable')   // firma final del programa
+                || tn.startsWith('fecha de elaboracion')
+                || tn.startsWith('fecha de actualizacion')
+                || tn.startsWith('fecha de modificacion')
+                || tn.includes('webgraf')                   // sección Webgrafía
+                || /Otros\s+materiales\s+de\s+apoyo/i.test(t);
         };
 
         parrafos.forEach(p => {
             if (esTituloBiblio(p)) { enBiblio = true; return; }
             if (!enBiblio) return;
-            // Detener si llegamos a otra sección principal (VIII, IX, etc.)
-            if (/^(?:VIII|IX|X)\.\s+/i.test(p) || /^SOBRE\s+INTEGRIDAD/i.test(p)) { enBiblio = false; return; }
+            if (esFin(p)) { enBiblio = false; enTipo = false; return; }
 
-            if (esTipoBasica(p))   { tipoActual = 'Básica';         return; }
-            if (esTipoComp(p))     { tipoActual = 'Complementaria'; return; }
+            if (esTipoBasica(p)) { tipoActual = 'Básica';         enTipo = true; return; }
+            if (esTipoComp(p))   { tipoActual = 'Complementaria'; enTipo = true; return; }
 
-            if (esReferencia(p)) {
-                const refLimpia = limpiarLinea(p).replace(/\s*\.+\s*\.+/g, '.').trim();
+            // Modo estricto (sin tipo previo): exige APA con año
+            // Modo laxa (con tipo previo): acepta cualquier línea sustancial sin URL
+            const esRef = enTipo ? esRefLaxa(p) : esRefEstricta(p);
+            if (esRef) {
+                const refLimpia = p.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').replace(/\s*\.+\s*\.+/g, '.').trim();
                 ext_datos.push({ archivo: filename, carrera, clave, nombre, tipo: tipoActual, ref: refLimpia, status: validarCalidad(refLimpia) });
             }
         });
@@ -1189,10 +1224,19 @@
         // FIX: limpiar viñetas (•, ●, ✔, etc.) del inicio de línea
         const limpiarL = t => t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').trim();
         // FIX: detectar fin de sección bibliografía
-        const esFin = t => /^(?:VIII|IX|X|XI)\.\s+/i.test(t)
-            || /^SOBRE\s+INTEGRIDAD/i.test(t)
-            || /^ACAD[EÉ]MICO\s+RESPONSABLE/i.test(t)
-            || /Otros\s+materiales\s+de\s+apoyo/i.test(t);
+        const esFin = t => {
+            const tn = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            return /^(?:VIII|IX|X|XI)\.\s+/i.test(t)
+                || /^SOBRE\s+INTEGRIDAD/i.test(t)
+                || tn.startsWith('academico responsable')
+                || tn.startsWith('unidad responsable')      // MAT: "Unidad responsable de la elaboración..."
+                || tn.startsWith('fecha de elaboracion')
+                || tn.startsWith('fecha de actualizacion')
+                || tn.startsWith('fecha de modificacion')
+                || tn.includes('webgraf')
+                || /plataforma\s+aula\s+virtual/i.test(tn) // MAT: "3. Plataforma Aula Virtual que contiene:"
+                || /Otros\s+materiales\s+de\s+apoyo/i.test(t);
+        };
 
         let tipoActual = 'Básica';
         let refActual  = '';
@@ -1211,16 +1255,13 @@
             if (esTipoBasica(l)) { guardarRef(); tipoActual = 'Básica';         continue; }
             if (esTipoComp(l))   { guardarRef(); tipoActual = 'Complementaria'; continue; }
 
-            // FIX PRINCIPAL: usar la viñeta '•' o '●' como delimitador de referencia nueva.
-            // Marzal no tiene año en la primera línea, así que no podemos depender del año
-            // para detectar el inicio — el bullet ES el separador confiable.
-            if (/^[•●]/.test(l)) {
-                // Nueva referencia: guardar la anterior y empezar acumulando esta
+            // Detectar inicio de referencia: •, ●  (ICI style) o - guión (MAT style)
+            if (/^[•●\-]/.test(l)) {
                 if (refActual.length > 0) guardarRef();
                 const lc = limpiarL(l);
                 if (lc.length > 5) refActual = lc;
             } else {
-                // Línea de continuación (ej: segunda línea de Marzal)
+                // Línea de continuación
                 const lc = l.trim();
                 if (lc.length > 5 && refActual.length > 0) refActual += ' ' + lc;
             }
@@ -1230,11 +1271,11 @@
     }
 
     function validarCalidad(ref) {
-        if (ref.match(/EUR\s*\d+/) || ref.match(/US\$\d+/) || ref.includes("PLIT")) return { level: 'error', msg: "⚠️ Precio/Basura" };
+        if (ref.match(/EUR\s*\d+/) || ref.match(/US\$\d+/) || ref.includes("PLIT")) return { level: 'error', msg: "ERROR — texto inválido" };
         const tieneAnio = /\b(19|20)\d{2}\b|\(s\.?f\.?\)/.test(ref);
-        if (!tieneAnio) return { level: 'warning', msg: "⚠️ Falta Año" };
-        if (/^\s*\(?\d{4}\)?/.test(ref) || /^\s*:/.test(ref) || /^\s*-/.test(ref)) return { level: 'warning', msg: "⚠️ ¿Falta Autor?" };
-        return { level: 'success', msg: "✅ OK" };
+        if (!tieneAnio) return { level: 'warning', msg: "INCOMPLETA — falta año" };
+        if (/^\s*\(?\d{4}\)?/.test(ref) || /^\s*:/.test(ref) || /^\s*-/.test(ref)) return { level: 'warning', msg: "INCOMPLETA — falta autor" };
+        return { level: 'success', msg: "OK" };
     }
 
     function ext_updateView() {
@@ -1338,12 +1379,13 @@
             const existe = gestor_refs.some(r => r.Referencia === d.ref);
             if (!existe) {
                 gestor_refs.push({
-                    Carrera:    d.carrera  || '',
-                    Clave:      d.clave    || '',
-                    Asignatura: d.nombre   || '',
-                    Tipo:       d.tipo,
-                    Referencia: d.ref,
-                    ISBN:       ''
+                    Carrera:      d.carrera  || '',
+                    Clave:        d.clave    || '',
+                    Asignatura:   d.nombre   || '',
+                    Tipo:         d.tipo,
+                    Referencia:   d.ref,
+                    ISBN:         '',
+                    Observaciones: d.status.level !== 'success' ? d.status.msg : ''
                 });
                 agregados++;
             }
@@ -1399,6 +1441,7 @@
                     ws[`C${fila}`] = { v: '',               t: 's' };
                     ws[`D${fila}`] = { v: d.ref,            t: 's' };
                     ws[`E${fila}`] = { v: '', t: 's' }; ws[`F${fila}`] = { v: '', t: 's' }; ws[`G${fila}`] = { v: '', t: 's' }; ws[`H${fila}`] = { v: '', t: 's' };
+                    if (d.status.level !== 'success') ws[`J${fila}`] = { v: d.status.msg, t: 's' };
                     fila++;
                 });
                 fila++;
@@ -1412,6 +1455,7 @@
                     ws[`C${fila}`] = { v: '',               t: 's' };
                     ws[`D${fila}`] = { v: d.ref,            t: 's' };
                     ws[`E${fila}`] = { v: '', t: 's' }; ws[`F${fila}`] = { v: '', t: 's' }; ws[`G${fila}`] = { v: '', t: 's' }; ws[`H${fila}`] = { v: '', t: 's' };
+                    if (d.status.level !== 'success') ws[`J${fila}`] = { v: d.status.msg, t: 's' };
                     fila++;
                 });
                 fila++;
