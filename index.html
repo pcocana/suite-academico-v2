@@ -1114,8 +1114,8 @@
         let enTipo = false; // si ya detectamos al menos un marcador Básica/Complementaria
 
         const esTituloBiblio = t => /(?:VI{1,3}\.?\s*)?(?:BIBLIOGRAFÍA|Referencias\s+Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)(?:\s+Y\s+.+)?$/i.test(t);
-        const esTipoBasica   = t => /(?:\d+\.\s*)?(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)/i.test(t);
-        const esTipoComp     = t => /(?:\d+\.\s*)?(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
+        const esTipoBasica   = t => /^(?:[\s\d\.✔✓►•●]*)?(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)\s*:?\s*$/i.test(t.trim());
+        const esTipoComp     = t => /^(?:[\s\d\.✔✓►•●]*)?(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)\s*:?\s*$/i.test(t.trim());
         const limpiarLinea   = t => t.replace(/^[\s•●\-\*✔✓►▪▸◆◉\d\.]+/, '').trim();
 
         // Detección estricta: APA con año (Apellido, Nombre. Título. Editorial, 2020.)
@@ -1147,18 +1147,29 @@
             const tn = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
             return /^(?:VIII|IX|X{1,3})\.\s+/i.test(t)
                 || /^SOBRE\s+INTEGRIDAD/i.test(t)
-                || tn.startsWith('academico responsable')   // firma final del programa
+                || tn.startsWith('academico responsable')
+                || tn.startsWith('unidad responsable')
                 || tn.startsWith('fecha de elaboracion')
                 || tn.startsWith('fecha de actualizacion')
                 || tn.startsWith('fecha de modificacion')
-                || tn.includes('webgraf')                   // sección Webgrafía
+                || tn.includes('webgraf')
                 || /Otros\s+materiales\s+de\s+apoyo/i.test(t);
+            // NOTA: NO incluir "plataforma aula virtual" aquí porque en algunos programas
+            // (QUI, BIO) aparece como sección 1 ANTES de las referencias
+        };
+
+        const esSeccionIgnorar = t => {
+            const tn = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            return tn.includes('recursos didacticos')
+                || tn.includes('plataforma aula virtual')
+                || tn.includes('navegador academico');
         };
 
         parrafos.forEach(p => {
             if (esTituloBiblio(p)) { enBiblio = true; return; }
             if (!enBiblio) return;
             if (esFin(p)) { enBiblio = false; enTipo = false; return; }
+            if (esSeccionIgnorar(p)) return;  // saltar subsecciones de recursos
 
             if (esTipoBasica(p)) { tipoActual = 'Básica';         enTipo = true; return; }
             if (esTipoComp(p))   { tipoActual = 'Complementaria'; enTipo = true; return; }
@@ -1218,9 +1229,10 @@
         }
         if (idxBiblio === -1) return;
 
-        // FIX: detectar subencabezados con "Bibliografía Obligatoria:" y "Bibliografía Complementaria:"
-        const esTipoBasica = t => /(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)/i.test(t);
-        const esTipoComp   = t => /(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
+        // FIX: anclar los tipos para evitar falsos positivos como
+        // "Guías complementarias previas a las evaluaciones de cátedra"
+        const esTipoBasica = t => /^(?:[\s\d\.✔✓►•●]*)?(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)\s*:?\s*$/i.test(t.trim());
+        const esTipoComp   = t => /^(?:[\s\d\.✔✓►•●]*)?(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)\s*:?\s*$/i.test(t.trim());
         // FIX: limpiar viñetas (•, ●, ✔, etc.) del inicio de línea
         const limpiarL = t => t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').trim();
         // FIX: detectar fin de sección bibliografía
@@ -1229,13 +1241,13 @@
             return /^(?:VIII|IX|X|XI)\.\s+/i.test(t)
                 || /^SOBRE\s+INTEGRIDAD/i.test(t)
                 || tn.startsWith('academico responsable')
-                || tn.startsWith('unidad responsable')      // MAT: "Unidad responsable de la elaboración..."
+                || tn.startsWith('unidad responsable')
                 || tn.startsWith('fecha de elaboracion')
                 || tn.startsWith('fecha de actualizacion')
                 || tn.startsWith('fecha de modificacion')
                 || tn.includes('webgraf')
-                || /plataforma\s+aula\s+virtual/i.test(tn) // MAT: "3. Plataforma Aula Virtual que contiene:"
                 || /Otros\s+materiales\s+de\s+apoyo/i.test(t);
+            // NOTA: NO incluir "plataforma aula virtual" — en QUI/BIO aparece ANTES de las refs
         };
 
         let tipoActual = 'Básica';
@@ -1249,9 +1261,17 @@
             refActual = '';
         };
 
+        const esSeccionIgnorar = t => {
+            const tn = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            return tn.includes('recursos didacticos')
+                || tn.includes('plataforma aula virtual')
+                || tn.includes('navegador academico');
+        };
+
         for (let i = idxBiblio + 1; i < lineas.length; i++) {
             const l = lineas[i];
             if (esFin(l)) { guardarRef(); break; }
+            if (esSeccionIgnorar(l)) { guardarRef(); continue; }  // saltar subsecciones de recursos
             if (esTipoBasica(l)) { guardarRef(); tipoActual = 'Básica';         continue; }
             if (esTipoComp(l))   { guardarRef(); tipoActual = 'Complementaria'; continue; }
 
