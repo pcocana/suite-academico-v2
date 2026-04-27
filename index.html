@@ -1251,13 +1251,13 @@
             return /^(?:VIII|IX|X|XI)\.\s+/i.test(t)
                 || /^SOBRE\s+INTEGRIDAD/i.test(t)
                 || tn.startsWith('academico responsable')
-                || tn.startsWith('unidad responsable')      // MAT: "Unidad responsable de la elaboración..."
+                || tn.startsWith('unidad responsable')
                 || tn.startsWith('fecha de elaboracion')
                 || tn.startsWith('fecha de actualizacion')
                 || tn.startsWith('fecha de modificacion')
-                || tn.includes('webgraf')
-                || /plataforma\s+aula\s+virtual/i.test(tn) // MAT: "3. Plataforma Aula Virtual que contiene:"
-                || /Otros\s+materiales\s+de\s+apoyo/i.test(t);
+                || tn.includes('webgraf');
+            // NOTA: NO incluir "plataforma aula virtual" — en QUI/BIO/MAT aparece
+            // como sección 1 ANTES de las referencias, no como condición de fin
         };
 
         let tipoActual = 'Básica';
