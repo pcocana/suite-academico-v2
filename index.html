@@ -1,1226 +1,1827 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Vigilancia Tecnológica · PUCV</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#07111f;--panel:#0c1a2e;--card:#101f35;--border:#1a2f4a;
-  --text:#d4e5f7;--muted:#4d6f94;--dim:#0f1e30;
-  --blue:#22d3ee;--green:#34d399;--amber:#fbbf24;--purple:#a78bfa;--coral:#f87171;
-  --orcid:#a6ce39;--scopus:#e9531d;--anid:#4d9ef7;
-}
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
-::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bibliografía Académica · PUCV</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-/* ── HEADER ── */
-#hdr{background:var(--panel);border-bottom:1px solid var(--border);padding:12px 22px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100}
-#hdr h1{font-size:15px;font-weight:600}
-#hdr .sub{font-size:11px;color:var(--muted)}
-.badge{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700}
-.b-or{background:#a6ce3922;color:var(--orcid);border:1px solid #a6ce3944}
-.b-sc{background:#e9531d22;color:var(--scopus);border:1px solid #e9531d44}
-.b-an{background:#0055a522;color:var(--anid);border:1px solid #0055a544}
+    <style>
+        /* ── Variables ─────────────────────────────────────────────────────── */
+        :root {
+            --navy:    #1e3355;
+            --navy-md: #2a4a7a;
+            --gold:    #b8952a;
+            --gold-lt: #f0e6c8;
+            --gold-bd: #d4b96a;
+            --cream:   #faf7f2;
+            --paper:   #ffffff;
+            --border:  #ddd5c5;
+            --text:    #2d2a24;
+            --muted:   #7a7060;
+            --green:   #1a6b3a;
+            --green-lt:#d6ede1;
+            --r: 8px;
+        }
 
-/* ── UPLOAD ── */
-#up{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:82vh;padding:32px;gap:20px}
-.dropz{border:2px dashed var(--border);border-radius:14px;padding:44px 60px;text-align:center;cursor:pointer;transition:all .2s;max-width:500px;width:100%}
-.dropz:hover,.dropz.drag{border-color:var(--blue);background:rgba(34,211,238,.04)}
-.dropz h2{font-size:17px;margin-bottom:6px}
-.dropz p{font-size:12px;color:var(--muted);margin-top:4px}
-.cfg{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;max-width:500px;width:100%}
-.cfg h3{font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:12px}
-.fld{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
-.fld label{font-size:11px;color:var(--muted)}
-.fld input,.fld select{background:var(--dim);border:1px solid var(--border);border-radius:7px;padding:8px 11px;color:var(--text);font-size:12px;outline:none}
-.fld input:focus{border-color:var(--blue)}
-.alert{padding:10px 13px;border-radius:8px;font-size:11px;margin-bottom:10px;display:flex;gap:7px;line-height:1.5}
-.al-w{background:#fbbf2413;border:1px solid #fbbf2440;color:var(--amber)}
-.al-g{background:#34d39913;border:1px solid #34d39940;color:var(--green)}
-.al-b{background:#22d3ee13;border:1px solid #22d3ee40;color:var(--blue)}
-.btn{padding:9px 18px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}
-.btn-p{background:var(--blue);color:#000}.btn-p:hover{opacity:.9}
-.btn-s{background:var(--dim);color:var(--text);border:1px solid var(--border)}.btn-s:hover{background:var(--border)}
-.btn-sm{padding:6px 12px;font-size:11px}
-.btn-xs{padding:4px 10px;font-size:10px}
-.tpl-link{font-size:11px;color:var(--blue);cursor:pointer;text-decoration:underline}
+        /* ── Base ───────────────────────────────────────────────────────────── */
+        body {
+            background: var(--cream);
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            color: var(--text);
+            font-size: 14px;
+        }
 
-/* ── PROCESSING ── */
-#proc{display:none;padding:28px;max-width:660px;margin:0 auto}
-#proc h2{font-size:17px;margin-bottom:6px}
-#proc .sub{font-size:12px;color:var(--muted);margin-bottom:18px}
-.pi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 15px;margin-bottom:8px}
-.pi-top{display:flex;align-items:center;gap:12px;margin-bottom:8px}
-.av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
-.pi-name{font-size:13px;font-weight:500}
-.pi-sub{font-size:10px;color:var(--muted)}
-.pi-steps{display:flex;gap:6px;flex-wrap:wrap}
-.step{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;transition:all .3s}
-.s-wait{background:var(--dim);color:var(--muted);border:1px solid var(--border)}
-.s-run{background:#fbbf2420;color:var(--amber);border:1px solid #fbbf2460;animation:pulse .8s ease-in-out infinite}
-.s-ok{background:#34d39920;color:var(--green);border:1px solid #34d39950}
-.s-fail{background:#f8717120;color:var(--coral);border:1px solid #f8717150}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
-.pbar{height:3px;background:var(--dim);border-radius:2px;overflow:hidden;margin-top:8px}
-.pbar-fill{height:100%;border-radius:2px;transition:width .4s ease}
+        /* ── Contenedor principal ───────────────────────────────────────────── */
+        .main-container {
+            max-width: 1260px;
+            margin: 28px auto 40px;
+            background: var(--paper);
+            border-radius: 14px;
+            box-shadow: 0 4px 32px rgba(30,51,85,.10), 0 1px 4px rgba(0,0,0,.04);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
 
-/* ── MAIN ── */
-#main{display:none;flex-direction:row;height:calc(100vh - 51px)}
-#sb{width:196px;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--panel);overflow-y:auto;flex-shrink:0}
-.sb-h{padding:10px 11px;border-bottom:1px solid var(--border)}
-.sb-h input{width:100%;background:var(--dim);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:11px;outline:none}
-.ii{padding:9px 11px;cursor:pointer;border-left:3px solid transparent;transition:all .12s}
-.ii:hover{background:var(--dim)}
-.ii.active{background:var(--dim)}
-.ii-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
-.ii-name{font-size:11px;font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ii-sub{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sb-ft{padding:8px 11px;border-top:1px solid var(--border);margin-top:auto;font-size:10px;color:var(--muted)}
+        /* ── Encabezado ─────────────────────────────────────────────────────── */
+        .app-header {
+            background: linear-gradient(135deg, var(--navy) 0%, var(--navy-md) 100%);
+            color: white;
+            padding: 18px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--gold);
+        }
+        .app-header-left { display: flex; align-items: center; gap: 16px; }
+        .app-header-logo {
+            width: 44px; height: 44px;
+            background: rgba(255,255,255,.12);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+        }
+        .app-title {
+            margin: 0;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -.02em;
+        }
+        .app-subtitle {
+            font-size: 11px;
+            color: rgba(255,255,255,.55);
+            margin: 2px 0 0;
+            font-weight: 400;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+        .app-header .btn-outline-light {
+            border-color: rgba(255,255,255,.35);
+            color: rgba(255,255,255,.85);
+            font-size: 12px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-family: 'Lato', sans-serif;
+        }
+        .app-header .btn-outline-light:hover {
+            background: rgba(255,255,255,.15);
+            color: white;
+        }
 
-/* ── DETAIL ── */
-#det{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-width:0}
-.ph{padding:16px 20px;border-bottom:1px solid var(--border);background:var(--panel);flex-shrink:0}
-.ph-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0}
-.ph-name{font-size:16px;font-weight:600;margin-bottom:2px}
-.ph-sub{font-size:11px;color:var(--muted);margin-bottom:7px}
-.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--panel);flex-shrink:0;overflow-x:auto}
-.tb{padding:9px 15px;font-size:11px;font-weight:500;background:transparent;border:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .12s;white-space:nowrap}
-.tb.on{border-bottom-color:var(--blue);color:var(--blue)}
-.tc{display:none;padding:16px 20px}
-.tc.on{display:block}
+        /* ── Pestañas ───────────────────────────────────────────────────────── */
+        .nav-tabs {
+            background: var(--navy);
+            border-bottom: none;
+            padding: 0 20px;
+            gap: 2px;
+        }
+        .nav-link {
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            font-size: 13px;
+            color: rgba(255,255,255,.55);
+            border: none !important;
+            border-radius: 0;
+            padding: 13px 22px 11px;
+            letter-spacing: .02em;
+            border-bottom: 3px solid transparent !important;
+            margin-bottom: 0;
+            transition: color .2s, border-color .2s;
+        }
+        .nav-link:hover { color: rgba(255,255,255,.85); }
+        .nav-link.active {
+            background: transparent !important;
+            color: var(--gold-bd) !important;
+            border-bottom-color: var(--gold-bd) !important;
+        }
+        .tab-content { padding: 32px 36px; background: var(--paper); }
 
-/* ── CARDS / TABLES ── */
-.sg{display:grid;gap:10px;margin-bottom:14px}
-.sg4{grid-template-columns:repeat(4,1fr)}
-.sg3{grid-template-columns:repeat(3,1fr)}
-.sg2{grid-template-columns:1fr 1fr}
-.sc{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px}
-.sc-lbl{font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:7px}
-.sc-val{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums}
-.sc-sub{font-size:10px;color:var(--muted);margin-top:2px}
-.pub-row{padding:9px 0;border-bottom:1px solid var(--border);display:flex;gap:9px;align-items:flex-start}
-.qb{width:26px;height:18px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
-.pub-t{font-size:12px;font-weight:500;line-height:1.4;margin-bottom:2px}
-.pub-m{font-size:11px;color:var(--muted)}
-.a-link{color:var(--blue);text-decoration:none;font-size:10px}
-.a-link:hover{text-decoration:underline}
-.oa-badge{display:inline-flex;align-items:center;gap:3px;font-size:9px;padding:2px 6px;
-  border-radius:3px;font-weight:700;letter-spacing:.3px;cursor:default;white-space:nowrap}
-.oa-badge a{color:inherit;text-decoration:none}.oa-badge a:hover{text-decoration:underline}
-.sjr-val{font-size:10px;font-weight:600;color:var(--green);margin-left:2px}
-.solo-oa{font-size:9px;padding:1px 5px;border-radius:3px;background:#a78bfa22;
-  color:var(--purple);border:1px solid #a78bfa44;font-weight:600}
-.pub-oa-bar{display:flex;height:10px;border-radius:4px;overflow:hidden;margin:6px 0 4px}
-.pub-oa-seg{height:100%}
-.co-row{display:flex;align-items:center;gap:10px;padding:7px 0;
-  border-bottom:1px solid var(--border)}
-.co-tipo{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;
-  white-space:nowrap;flex-shrink:0}
-.co-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
-.co-inst{font-size:10px;color:var(--muted);margin-top:1px}
-.co-pais{font-size:9px;padding:1px 5px;border-radius:2px;
-  background:var(--dim);color:var(--muted);font-family:monospace}
-.co-n{font-size:11px;font-weight:700;margin-left:auto;flex-shrink:0}
-.tipo-tab{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-.tipo-pill{padding:4px 10px;border-radius:12px;font-size:10px;font-weight:600;
-  cursor:pointer;border:1px solid transparent;transition:all .2s}
-.tipo-pill.active{border-color:currentColor}
-.co-grafo-svg text{font-family:system-ui}
-.ac{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:9px}
-.ac-bgs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px}
-.typ{font-size:10px;padding:2px 6px;border-radius:3px;font-weight:600}
-.s-act{background:#34d39920;color:#34d399;border:1px solid #34d39940}
-.s-fin{background:#64748b20;color:#64748b;border:1px solid #64748b40}
-.ac-t{font-size:13px;font-weight:500;margin-bottom:5px;line-height:1.4}
-.ac-m{font-size:11px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
-.am-g{color:var(--green);font-weight:500}
+        /* ── Sección headings ───────────────────────────────────────────────── */
+        .tab-pane h3 {
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+            font-size: 1.25rem;
+            letter-spacing: -.02em;
+            margin-bottom: 20px;
+        }
+        .card h5 { font-family: 'DM Sans', sans-serif; font-size: .95rem; color: var(--navy); font-weight: 600; }
 
-/* IDs tab */
-.id-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
-.id-src{width:70px;font-size:10px;font-weight:700;flex-shrink:0}
-.id-val{font-family:monospace;font-size:12px;flex:1}
-.id-how{font-size:10px;padding:2px 6px;border-radius:3px}
-.h-auto{background:#34d39920;color:#34d399;border:1px solid #34d39940}
-.h-json{background:#fbbf2420;color:var(--amber);border:1px solid #fbbf2440}
-.h-none{background:var(--dim);color:var(--muted);border:1px solid var(--border)}
-.id-act{font-size:10px}
-.id-act a{color:var(--blue)}
+        /* ── Autocompletado ─────────────────────────────────────────────────── */
+        .auto-fill-box {
+            background: linear-gradient(to right, #eef4ff, #f5f0ff);
+            border: 1px solid #c8d8f8;
+            padding: 16px 18px;
+            border-radius: var(--r);
+            margin-bottom: 20px;
+        }
+        .auto-fill-box .form-label { color: var(--navy); font-weight: 700; font-size: 13px; }
 
-/* Global table */
-.gt{width:100%;border-collapse:collapse;font-size:12px}
-.gt th{text-align:left;padding:7px 9px;background:var(--dim);color:var(--muted);font-size:10px;letter-spacing:.5px;border-bottom:1px solid var(--border)}
-.gt td{padding:7px 9px;border-bottom:1px solid var(--border)}
-.gt tr:hover td{background:var(--dim);cursor:pointer}
-.h-hi{color:#34d399;font-weight:700}.h-md{color:var(--amber);font-weight:600}.c-hi{color:var(--blue);font-weight:600}
+        /* ── Botones ────────────────────────────────────────────────────────── */
+        .btn-magic {
+            background: linear-gradient(135deg, #5e35b1, #7c4dff);
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+        .btn-magic:hover { background: linear-gradient(135deg, #4a27a0, #6a3de8); color: white; }
 
-/* export bar */
-#ebar{padding:9px 20px;border-top:1px solid var(--border);background:var(--panel);display:flex;align-items:center;gap:8px;flex-shrink:0}
-#ebar span{font-size:11px;color:var(--muted);margin-right:auto}
+        .btn-primary {
+            background: var(--navy);
+            border-color: var(--navy);
+            font-weight: 600;
+        }
+        .btn-primary:hover { background: var(--navy-md); border-color: var(--navy-md); }
 
-.hidden{display:none!important}
-.flex{display:flex}.gap8{gap:8px}.mt8{margin-top:8px}.fade{animation:fd .2s ease}
-@keyframes fd{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
-</style>
+        .btn-success {
+            background: var(--green);
+            border-color: var(--green);
+            font-weight: 600;
+        }
+
+        /* ── Formularios ────────────────────────────────────────────────────── */
+        .form-control, .form-select {
+            border-color: var(--border);
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13.5px;
+            background: var(--paper);
+            color: var(--text);
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--navy-md);
+            box-shadow: 0 0 0 3px rgba(42,74,122,.12);
+        }
+        .form-label { font-size: 12.5px; font-weight: 600; color: var(--muted); letter-spacing: .02em; margin-bottom: 4px; }
+
+        /* ── Drop zones ─────────────────────────────────────────────────────── */
+        .drop-zone {
+            border: 2px dashed var(--gold-bd);
+            background: var(--gold-lt);
+            border-radius: 12px;
+            padding: 42px;
+            text-align: center;
+            cursor: pointer;
+            transition: .25s;
+        }
+        .drop-zone:hover { background: #ede3c5; border-color: var(--gold); }
+        .drop-zone h4 { font-family: 'DM Sans', sans-serif; color: var(--navy); font-size: 1.1rem; font-weight: 600; }
+
+        .drop-zone-import {
+            border-color: #9c78d4;
+            background: #f4f0fc;
+        }
+        .drop-zone-import:hover { background: #ebe3fa; border-color: #7c4dff; }
+        .drop-zone-import h4 { color: #5e35b1; }
+
+        /* ── Tablas ─────────────────────────────────────────────────────────── */
+        .table {
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+        }
+        .table thead th {
+            font-family: 'Inter', sans-serif;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: .07em;
+            text-transform: uppercase;
+        }
+        .table-dark thead {
+            background: var(--navy) !important;
+        }
+        .table-bordered { border-color: var(--border) !important; }
+        .table-bordered td, .table-bordered th { border-color: var(--border) !important; }
+        .table-hover tbody tr:hover { background: rgba(184,149,42,.06) !important; }
+        .table-light { background: var(--cream) !important; }
+        .table-striped tbody tr:nth-of-type(odd) { background: rgba(250,247,242,.7); }
+
+        /* ── Row states ─────────────────────────────────────────────────────── */
+        .row-ok      { background-color: #d6ede1 !important; }
+        .row-warning { background-color: #fdf4d6 !important; }
+        .row-error   { background-color: #fad8da !important; }
+
+        /* ── Badges ─────────────────────────────────────────────────────────── */
+        .badge.bg-primary { background: var(--navy) !important; }
+        .badge.bg-secondary { background: var(--muted) !important; }
+        .badge.bg-success { background: var(--green) !important; }
+
+        /* ── Requerido ──────────────────────────────────────────────────────── */
+        .req-star { color: #c0392b; font-weight: bold; }
+
+        /* ── Resumen disponibilidad ─────────────────────────────────────────── */
+        #disp_resumen .fw-bold.fs-4 { font-family: 'DM Sans', sans-serif; font-size: 2rem !important; font-weight: 700; }
+
+        /* ── Modal ──────────────────────────────────────────────────────────── */
+        .modal-header.bg-dark { background: var(--navy) !important; }
+        .modal-manual-body {
+            max-height: 75vh; overflow-y: auto;
+            text-align: left; padding: 28px 32px;
+            background: var(--paper); line-height: 1.7;
+            font-family: 'Inter', sans-serif;
+        }
+        .manual-step-box {
+            background: var(--cream);
+            border-left: 4px solid var(--navy);
+            padding: 16px 18px;
+            margin-bottom: 14px;
+            border-radius: 0 var(--r) var(--r) 0;
+        }
+        .manual-step-box h5 { font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700; }
+        .step-number { font-weight: 700; color: var(--navy); font-size: 1.05em; margin-right: 4px; }
+
+        /* ── Alert info ─────────────────────────────────────────────────────── */
+        .alert-info {
+            background: #eef4ff !important;
+            border-color: #c2d4f5 !important;
+            color: var(--navy) !important;
+        }
+
+        /* ── Sticky thead ───────────────────────────────────────────────────── */
+        .sticky-top { top: 0; z-index: 2; }
+
+        /* ── Scrollbar suave ────────────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--cream); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gold-bd); }
+    </style>
 </head>
 <body>
 
-<div id="hdr">
-  <div><h1>🔬 Vigilancia Tecnológica</h1><div class="sub">PUCV · Instituto de Matemática</div></div>
-  <div class="flex gap8" style="margin-left:auto;flex-wrap:wrap">
-    <span class="badge b-or">ORCID</span>
-    <span class="badge b-sc">Scopus</span>
-    <span class="badge b-an">ANID</span>
-  </div>
-  <button class="btn btn-s btn-sm hidden" id="btn-rst" onclick="resetApp()">↩ Reiniciar</button>
+<div class="main-container">
+    <div class="app-header">
+        <div class="app-header-left">
+            <div class="app-header-logo">📚</div>
+            <div>
+                <h1 class="app-title">Bibliografía Académica</h1>
+                <div class="app-subtitle">Pontificia Universidad Católica de Valparaíso</div>
+            </div>
+        </div>
+        <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#manualModal">
+            📖 Manual de Uso
+        </button>
+    </div>
+
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="gestor-tab" data-bs-toggle="tab" data-bs-target="#gestor-pane" type="button">
+                🛠️ Gestor & Creador APA 7
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="extractor-tab" data-bs-toggle="tab" data-bs-target="#extractor-pane" type="button">
+                📂 Extractor Masivo (Auditoría)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="importador-tab" data-bs-toggle="tab" data-bs-target="#importador-pane" type="button">
+                📚 Importador Zotero/Mendeley
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="disponibilidad-tab" data-bs-toggle="tab" data-bs-target="#disponibilidad-pane" type="button">
+                🔍 Disponibilidad PUCV
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        
+        <div class="tab-pane fade show active" id="gestor-pane">
+            <h3 class="mb-4 text-primary">Gestor Inteligente de Bibliografías</h3>
+            <div class="card mb-4 border-light bg-light">
+                <div class="card-body">
+                    <h5>1. Datos de Contexto</h5>
+                    <div class="row g-3">
+                        <div class="col-md-4"><label class="form-label">Carrera</label><input type="text" id="g_carrera" class="form-control" placeholder="Ej. Ingeniería"></div>
+                        <div class="col-md-4"><label class="form-label">Clave</label><input type="text" id="g_clave" class="form-control" placeholder="Ej. MAT-101"></div>
+                        <div class="col-md-4"><label class="form-label">Asignatura</label><input type="text" id="g_nombre" class="form-control" placeholder="Ej. Cálculo I"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="auto-fill-box">
+                <label class="form-label fw-bold text-primary">✨ Autocompletado (Limpieza Profunda)</label>
+                <div class="input-group">
+                    <input type="text" id="inputMagic" class="form-control" placeholder="Pega DOI (ej: 10.1002/...) o ISBN">
+                    <button class="btn btn-magic" type="button" onclick="gestor_buscarMetadatos()" id="btnBuscar">🪄 Buscar y Rellenar</button>
+                </div>
+                <small class="text-muted">El sistema corrige automáticamente títulos en mayúsculas y elimina textos comerciales.</small>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Tipo de Recurso</label>
+                    <select id="tipoRecurso" class="form-select" onchange="gestor_actualizarFormulario()">
+                        <option value="">-- Seleccione --</option>
+                        <option value="libro">Libro Completo</option>
+                        <option value="capitulo">Capítulo de Libro</option>
+                        <option value="revista">Artículo Científico</option>
+                        <option value="tesis">Tesis / Trabajo de Grado</option>
+                        <option value="informe">Informe Técnico / Institucional</option>
+                        <option value="conferencia">Ponencia / Conferencia</option>
+                        <option value="web">Sitio Web</option>
+                        <option value="youtube">YouTube</option>
+                        <option value="ia">IA (ChatGPT)</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Tipo Bibliografía</label>
+                    <select id="tipoBiblio" class="form-select">
+                        <option value="Básica">Básica</option>
+                        <option value="Complementaria">Complementaria</option>
+                    </select>
+                </div>
+                <div id="camposDinamicos" class="row g-3 mt-1"></div>
+                <div class="col-12 mt-3"><button class="btn btn-primary w-100" onclick="gestor_agregarReferencia()">+ Agregar a la Lista</button></div>
+            </div>
+
+            <div class="mt-4">
+                <h4>Referencias Cargadas</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped" id="tablaGestor">
+                        <thead class="table-dark"><tr><th>Tipo</th><th>Referencia APA 7</th><th>ISBN</th><th>Acción</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <button class="btn btn-success mt-3" onclick="gestor_exportarExcel()">📥 Descargar Excel (Gestor)</button>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="extractor-pane">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="text-success">Extractor Masivo de Bibliografía</h3>
+                <div>
+                    <span class="badge bg-secondary me-2" id="badgeArchivos">0 Archivos</span>
+                    <span class="badge bg-primary" id="badgeRefs">0 Refs Totales</span>
+                </div>
+            </div>
+
+            <div class="drop-zone" id="dropZone">
+                <h4>📂 Arrastra tus archivos aquí</h4>
+                <p class="text-muted">Soporta PDF, Word (.docx) y texto plano (.txt). <strong>Mejorado para detectar sección de bibliografía en programas PUCV.</strong></p>
+                <input type="file" id="fileInput" multiple accept=".pdf,.docx,.txt" style="display:none">
+                <button class="btn btn-outline-primary btn-sm mt-2" onclick="document.getElementById('fileInput').click()">O selecciona archivos</button>
+            </div>
+
+            <div class="d-flex justify-content-between mt-3 mb-2">
+                <button class="btn btn-danger btn-sm" onclick="ext_reiniciarTodo()">🗑️ Limpiar Todo</button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary disabled" id="btnEnviarGestor" onclick="ext_enviarAlGestor()">➡️ Enviar al Gestor</button>
+                    <button class="btn btn-success disabled" id="btnDescargarExt" onclick="ext_exportarExcel()">📥 Descargar Excel Unificado</button>
+                </div>
+            </div>
+
+            <!-- Resumen por asignatura -->
+            <div id="ext_resumenAsignaturas" style="display:none;" class="mb-3">
+                <h6 class="text-muted mb-2">Asignaturas cargadas</h6>
+                <div id="ext_resumenLista" class="d-flex flex-wrap gap-2"></div>
+            </div>
+
+            <div class="table-responsive mt-3" style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-hover table-bordered small">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th width="15%">Sigla</th>
+                            <th width="20%">Asignatura</th>
+                            <th width="10%">Tipo</th>
+                            <th width="40%">Referencia</th>
+                            <th width="25%">Validación</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaExtractorBody">
+                        <tr><td colspan="5" class="text-center text-muted py-4">Esperando archivos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="statusLog" class="text-muted small mt-2">Listo para procesar.</div>
+        </div>
+
+        <div class="tab-pane fade" id="importador-pane">
+            <h3 class="mb-1" style="color: #6610f2;">📚 Importador Zotero / Mendeley</h3>
+            <p class="text-muted mb-4">Sube archivos <strong>.RIS</strong> o <strong>.BIB</strong> exportados desde Zotero o Mendeley.</p>
+
+            <div class="drop-zone drop-zone-import" id="dropZoneImport" onclick="document.getElementById('fileInputImport').click()">
+                <h4 style="color: #6610f2;">📚 Arrastra tu archivo .RIS o .BIB aquí</h4>
+                <p class="text-muted mb-1">O haz clic para seleccionar</p>
+                <input type="file" id="fileInputImport" accept=".ris,.bib" style="display:none">
+                <button class="btn btn-outline-secondary btn-sm mt-1" onclick="event.stopPropagation(); document.getElementById('fileInputImport').click()">Seleccionar Archivo</button>
+            </div>
+
+            <div class="mt-4" id="importResults" style="display:none;">
+
+                <!-- Datos de contexto -->
+                <div class="card mb-3 border-light bg-light">
+                    <div class="card-body">
+                        <h6 class="mb-3">Datos de contexto <small class="text-muted fw-normal">(se asignan a todas las referencias importadas)</small></h6>
+                        <div class="row g-2">
+                            <div class="col-md-3"><label class="form-label small">Carrera</label><input type="text" id="imp_carrera" class="form-control form-control-sm" placeholder="Ej. Pedagogía en Matemática"></div>
+                            <div class="col-md-2"><label class="form-label small">Clave</label><input type="text" id="imp_clave" class="form-control form-control-sm" placeholder="Ej. IMA 1001"></div>
+                            <div class="col-md-4"><label class="form-label small">Asignatura</label><input type="text" id="imp_asignatura" class="form-control form-control-sm" placeholder="Ej. Cálculo I"></div>
+                            <div class="col-md-3"><label class="form-label small">Aplicar tipo a todas</label>
+                                <div class="input-group input-group-sm">
+                                    <select id="imp_tipo" class="form-select form-select-sm">
+                                        <option value="Básica">Básica</option>
+                                        <option value="Complementaria">Complementaria</option>
+                                    </select>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="imp_aplicarTipoGlobal(document.getElementById('imp_tipo').value)" title="Aplicar a todas las filas">↓ Todas</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <h6 class="mb-0">Referencias <span class="badge bg-secondary" id="imp_badge">0</span></h6>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="imp_seleccionarTodas()" style="font-size:.8rem;">☑ Todas</button>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="imp_deseleccionarTodas()" style="font-size:.8rem;">☐ Ninguna</button>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="imp_copiarTodas()">📋 Copiar todas</button>
+                        <button class="btn btn-primary btn-sm" onclick="imp_enviarAlGestor()">➡️ Enviar seleccionadas</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover table-sm">
+                        <thead class="table-light"><tr><th width="40" class="text-center">✓</th><th>Referencia APA 7</th><th width="140">Tipo</th><th width="60" class="text-center">Copiar</th></tr></thead>
+                        <tbody id="tablaImportadorBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL DE DISPONIBILIDAD PUCV -->
+        <div class="tab-pane fade" id="disponibilidad-pane">
+            <h3 class="mb-1" style="color:#0d6efd;">🔍 Panel de Disponibilidad PUCV</h3>
+            <p class="text-muted mb-4">Consulta si los libros de una bibliografía están en el catálogo de la Biblioteca PUCV. Se abrirá el catálogo con la búsqueda lista en una nueva pestaña.</p>
+
+            <!-- Instrucciones paso a paso -->
+            <div class="alert alert-info d-flex gap-3 align-items-start mb-4" style="border-left: 4px solid #0d6efd; border-radius:8px;">
+                <span style="font-size:1.4rem;">💡</span>
+                <div>
+                    <strong>¿Cómo funciona?</strong><br>
+                    Ingresa las referencias manualmente o cárgalas desde el Gestor. Luego haz clic en <strong>"Buscar en catálogo"</strong> para cada libro — se abre el catálogo PUCV con la búsqueda lista. Marca el resultado y genera el informe final.
+                </div>
+            </div>
+
+            <!-- Carga desde Gestor -->
+            <div class="card mb-4 border-light bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <h6 class="mb-0">Cargar desde el Gestor Principal</h6>
+                            <small class="text-muted">Importa automáticamente las referencias ya cargadas en el Gestor APA 7</small>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="disp_cargarDesdeGestor()">📥 Importar desde Gestor</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agregar referencia manual -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h6 class="mb-3">Agregar libro manualmente</h6>
+                    <div class="row g-2">
+                        <div class="col-md-5">
+                            <input type="text" id="disp_titulo" class="form-control" placeholder="Título del libro *">
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" id="disp_autor" class="form-control" placeholder="Autor (opcional)">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" id="disp_anio" class="form-control" placeholder="Año">
+                        </div>
+                        <div class="col-md-1">
+                            <button class="btn btn-success w-100" onclick="disp_agregarManual()" title="Agregar">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla principal -->
+            <div class="table-responsive mb-3">
+                <table class="table table-bordered table-hover" id="disp_tabla">
+                    <thead class="table-dark">
+                        <tr>
+                            <th width="35%">Título</th>
+                            <th width="22%">Autor</th>
+                            <th width="7%">Año</th>
+                            <th width="16%">Buscar en PUCV</th>
+                            <th width="13%">Disponibilidad</th>
+                            <th width="7%">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="disp_tbody">
+                        <tr><td colspan="6" class="text-center text-muted py-4">Aún no hay libros en la lista. Agrega uno arriba o importa desde el Gestor.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Resumen + exportar -->
+            <div id="disp_resumen" style="display:none;" class="mb-3">
+                <div class="row g-3 text-center mb-3">
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background:#d1e7dd; border:1px solid #a3cfbb;">
+                            <div class="fw-bold fs-4" id="disp_cnt_disponible">0</div>
+                            <small class="text-success fw-bold">✅ Disponible</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background:#fff3cd; border:1px solid #ffe69c;">
+                            <div class="fw-bold fs-4" id="disp_cnt_prestado">0</div>
+                            <small class="text-warning fw-bold">🟡 Prestado / Revisar</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background:#f8d7da; border:1px solid #f1aeb5;">
+                            <div class="fw-bold fs-4" id="disp_cnt_noesta">0</div>
+                            <small class="text-danger fw-bold">🔴 No está en catálogo</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background:#e2e3e5; border:1px solid #c4c5c7;">
+                            <div class="fw-bold fs-4" id="disp_cnt_sin">0</div>
+                            <small class="text-muted fw-bold">⬜ Sin verificar</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-success" onclick="disp_exportarExcel()">📥 Descargar informe Excel</button>
+                    <button class="btn btn-outline-danger" onclick="disp_limpiar()">🗑️ Limpiar lista</button>
+                </div>
+            </div>
+        </div>
+        <!-- FIN Panel Disponibilidad -->
+
+    </div>
 </div>
 
-<!-- ── UPLOAD ── -->
-<div id="up">
-  <div class="dropz" id="dz" onclick="document.getElementById('fi').click()"
-       ondragover="event.preventDefault();this.classList.add('drag')"
-       ondragleave="this.classList.remove('drag')"
-       ondrop="handleDrop(event)">
-    <div style="font-size:44px;margin-bottom:14px">📋</div>
-    <h2>Cargar planilla de investigadores</h2>
-    <p>Arrastra el Excel o haz clic para seleccionar</p>
-    <p style="margin-top:10px;font-size:11px">Formato: <strong>Nombre · Apellido</strong> · Unidad Académica (opcional)</p>
-    <input type="file" id="fi" accept=".xlsx,.xls" style="display:none" onchange="handleFile(this.files[0])"/>
-  </div>
+<div class="modal fade" id="manualModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">📖 Manual de Uso — Bibliografía Académica</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body modal-manual-body">
 
-  <div class="cfg">
-    <h3>CONFIGURACIÓN</h3>
+                <!-- GESTOR -->
+                <div class="manual-step-box">
+                    <h5 class="text-primary mb-2">🛠️ Gestor & Creador APA 7</h5>
+                    <p>Permite crear referencias bibliográficas en formato APA 7 de forma manual o automática, y exportarlas en la planilla oficial institucional.</p>
+                    <p><span class="step-number">1.</span><strong>Datos de contexto:</strong> Ingresa la Carrera, Clave y Asignatura antes de agregar referencias. Estos datos se asocian a cada referencia y aparecerán en la planilla Excel.</p>
+                    <p><span class="step-number">2.</span><strong>Autocompletado por ISBN o DOI:</strong> Pega el ISBN o DOI del libro o artículo y haz clic en <em>Buscar y Rellenar</em>. El sistema consulta Google Books y OpenLibrary y rellena los campos automáticamente. Si el autor no se encuentra, se mostrará una advertencia para ingresarlo manualmente.</p>
+                    <p><span class="step-number">3.</span><strong>Ingreso manual:</strong> Selecciona el tipo de recurso (Libro, Capítulo, Artículo, Tesis, Informe, Conferencia, Web, YouTube, IA) y completa los campos que aparecen. Haz clic en <em>+ Agregar a la Lista</em>.</p>
+                    <p><span class="step-number">4.</span><strong>Exportar planilla:</strong> Una vez cargadas todas las referencias, haz clic en <em>Descargar Excel</em>. La planilla saldrá en el formato oficial institucional, agrupada por asignatura con separadores de bibliografía básica y complementaria.</p>
+                    <p class="text-muted small mb-0">💡 Puedes cargar referencias de múltiples asignaturas en el mismo Gestor. Al exportar, cada asignatura quedará agrupada por separado en la planilla.</p>
+                </div>
 
-    <div class="fld">
-      <label>Institución (para filtrar resultados ORCID ambiguos)</label>
-      <input type="text" id="cfg-inst" value="PUCV" placeholder="PUCV, U. Chile..."/>
+                <!-- EXTRACTOR -->
+                <div class="manual-step-box">
+                    <h5 class="text-success mb-2">📂 Extractor Masivo</h5>
+                    <p>Carga programas de asignatura en PDF o Word y extrae automáticamente las referencias bibliográficas, detectando si son básicas o complementarias.</p>
+                    <p><span class="step-number">1.</span><strong>Cargar archivos:</strong> Arrastra uno o varios archivos PDF o Word (.docx) a la zona de carga. Puedes cargar múltiples asignaturas de una vez.</p>
+                    <p><span class="step-number">2.</span><strong>Detección automática:</strong> El sistema identifica la sección de bibliografía, detecta la asignatura y la clave, y clasifica las referencias como <em>Básica</em> o <em>Complementaria</em>. También reconoce variantes como <em>Obligatoria</em> o <em>Recomendada</em>.</p>
+                    <p><span class="step-number">3.</span><strong>Editar si es necesario:</strong> Si el sistema no detectó correctamente la clave o nombre de una asignatura, usa el botón <em>✏️ Editar</em> en el separador gris para corregirlo antes de exportar.</p>
+                    <p><span class="step-number">4.</span><strong>Enviar al Gestor o descargar:</strong> Usa <em>➡️ Enviar al Gestor</em> para combinar con otras referencias y exportar la planilla oficial, o usa <em>📥 Descargar Excel Unificado</em> para exportar directamente en formato oficial.</p>
+                    <p class="text-muted small mb-0">⚠️ La calidad de extracción depende del formato del documento. PDFs escaneados (imágenes) no son procesables. Si el documento tiene un formato muy irregular, usa el Gestor para ingresar las referencias manualmente.</p>
+                </div>
+
+                <!-- IMPORTADOR -->
+                <div class="manual-step-box">
+                    <h5 mb-2 style="color:#6610f2;">📚 Importador Zotero / Mendeley</h5>
+                    <p>Importa referencias exportadas desde Zotero o Mendeley en formato .RIS o .BibTeX y las convierte a APA 7.</p>
+                    <p><span class="step-number">1.</span><strong>Exportar desde Zotero/Mendeley:</strong> En tu gestor bibliográfico, selecciona las referencias y expórtalas en formato RIS (.ris) o BibTeX (.bib).</p>
+                    <p><span class="step-number">2.</span><strong>Cargar el archivo:</strong> Arrastra el archivo .ris o .bib a la zona de carga.</p>
+                    <p><span class="step-number">3.</span><strong>Asignar a una asignatura:</strong> Completa los campos Carrera, Clave y Asignatura. Luego marca con el checkbox las referencias que pertenecen a esa asignatura y asigna el tipo (Básica o Complementaria) a cada una.</p>
+                    <p><span class="step-number">4.</span><strong>Enviar por grupos:</strong> Haz clic en <em>➡️ Enviar seleccionadas</em>. Luego cambia la Clave y Asignatura, selecciona el siguiente grupo y repite. Usa los botones <em>☑ Todas</em> y <em>☐ Ninguna</em> para agilizar la selección.</p>
+                    <p><span class="step-number">5.</span><strong>Exportar:</strong> Ve al Gestor Principal donde aparecerán todas las referencias enviadas y descarga la planilla oficial.</p>
+                    <p class="text-muted small mb-0">💡 El botón <em>↓ Todas</em> junto al selector de tipo aplica el mismo tipo a todas las filas de golpe.</p>
+                </div>
+
+                <!-- DISPONIBILIDAD -->
+                <div class="manual-step-box">
+                    <h5 style="color:#0d6efd;" class="mb-2">🔍 Disponibilidad PUCV</h5>
+                    <p>Verifica si los libros de una bibliografía están disponibles en el catálogo de la Biblioteca PUCV.</p>
+                    <p><span class="step-number">1.</span><strong>Cargar referencias:</strong> Haz clic en <em>📥 Importar desde Gestor</em> para traer automáticamente los libros del Gestor Principal, o agrega títulos manualmente.</p>
+                    <p><span class="step-number">2.</span><strong>Buscar en catálogo:</strong> Para cada libro haz clic en <em>🔍 Buscar</em>. Se abrirá el catálogo PUCV con la búsqueda lista en una nueva pestaña. El sistema normaliza automáticamente títulos con caracteres especiales, tildes e idiomas extranjeros para mejorar los resultados.</p>
+                    <p><span class="step-number">3.</span><strong>Marcar disponibilidad:</strong> Revisa el resultado en el catálogo y vuelve a la aplicación para marcar el estado: ✅ Disponible / 🟡 Prestado o Revisar / 🔴 No está en catálogo.</p>
+                    <p><span class="step-number">4.</span><strong>Descargar informe:</strong> El botón <em>📥 Descargar informe Excel</em> genera un informe con el estado de cada libro y un enlace directo al catálogo PUCV para cada uno.</p>
+                    <p class="text-muted small mb-0">💡 El semáforo de resumen muestra el panorama general de disponibilidad de la bibliografía completa.</p>
+                </div>
+
+                <!-- FLUJO RECOMENDADO -->
+                <div class="manual-step-box" style="border-left-color: #198754;">
+                    <h5 class="text-success mb-2">✅ Flujo de trabajo recomendado</h5>
+                    <p class="mb-1"><strong>Opción A — Desde un programa de asignatura (PDF/Word):</strong></p>
+                    <p class="text-muted small">Extractor Masivo → Enviar al Gestor → Descargar planilla Excel oficial</p>
+                    <p class="mb-1"><strong>Opción B — Ingreso manual o por ISBN:</strong></p>
+                    <p class="text-muted small">Gestor (ingresar referencias) → Descargar planilla Excel oficial</p>
+                    <p class="mb-1"><strong>Opción C — Desde Zotero o Mendeley:</strong></p>
+                    <p class="text-muted small">Importador (cargar .RIS/.BIB → seleccionar grupos → enviar) → Gestor → Descargar planilla</p>
+                    <p class="mb-1"><strong>Opción D — Verificar disponibilidad:</strong></p>
+                    <p class="text-muted small">Cualquiera de las opciones anteriores → Panel Disponibilidad PUCV → Descargar informe</p>
+                </div>
+
+            </div>
+        </div>
     </div>
-    <div class="alert al-g">
-      ✅ <div><strong>Descubrimiento automático:</strong> ORCID se busca por nombre desde el navegador. Scopus, ANID y áreas temáticas requieren el JSON de <code>Vigilancia3.py</code>.</div>
-    </div>
-    <div class="alert al-w">
-      ⚠️ <div>Carga el <code>datos_dashboard.json</code> para obtener h-index, citas y publicaciones Scopus.</div>
-    </div>
-    <div class="fld">
-      <label>Cargar datos_dashboard.json (Scopus + ANID — opcional)</label>
-      <input type="file" id="ji" accept=".json" onchange="loadJSON(this.files[0])" style="color:var(--muted)"/>
-    </div>
-    <div style="margin-top:10px">
-      <span class="tpl-link" onclick="downloadTemplate()">⬇ Descargar plantilla Excel de ejemplo</span>
-    </div>
-  </div>
 </div>
 
-<!-- ── PROCESSING ── -->
-<div id="proc">
-  <h2>⚙️ Descubriendo perfiles</h2>
-  <div class="sub" id="proc-sub">Buscando identificadores en ORCID...</div>
-  <div id="proc-list"></div>
-  <div class="hidden" id="proc-done" style="margin-top:18px;display:flex;gap:10px">
-    <button class="btn btn-p" onclick="showDashboard()">Ver Dashboard →</button>
-  </div>
-</div>
-
-<!-- ── MAIN DASHBOARD ── -->
-<div id="main">
-  <div id="sb">
-    <div class="sb-h">
-      <input type="text" placeholder="🔍 Buscar..." oninput="filterSb(this.value)"/>
-    </div>
-    <div id="inv-list"></div>
-    <div class="sb-ft" id="sb-ft"></div>
-  </div>
-  <div id="det">
-    <div class="ph" id="ph"></div>
-    <div class="tabs" id="tab-bar">
-      <button class="tb on" onclick="sw('ov',this)">📊 Resumen</button>
-      <button class="tb" onclick="sw('pub',this)">📄 Publicaciones</button>
-      <button class="tb" onclick="sw('col',this)">🤝 Colaboraciones</button>
-      <button class="tb" onclick="sw('an',this)">🇨🇱 ANID</button>
-      <button class="tb" onclick="sw('ids',this)">🆔 IDs</button>
-      <button class="tb" onclick="sw('gl',this)">🌐 Vista Global</button>
-    </div>
-    <div id="tc-ov" class="tc on fade"></div>
-    <div id="tc-pub" class="tc fade"></div>
-    <div id="tc-col" class="tc fade"></div>
-    <div id="tc-an" class="tc fade"></div>
-    <div id="tc-ids" class="tc fade"></div>
-    <div id="tc-gl" class="tc fade"></div>
-    <div id="ebar">
-      <span id="eb-info">—</span>
-      <label class="btn btn-s btn-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px">
-        📂 Cargar JSON
-        <input type="file" accept=".json" onchange="loadJSON(this.files[0])" style="display:none"/>
-      </label>
-      <button class="btn btn-s btn-sm" onclick="exportXLSX()">⬇ Excel</button>
-      <button class="btn btn-s btn-sm" onclick="exportJSON()">⬇ JSON</button>
-    </div>
-  </div>
-</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-// ─── STATE ───────────────────────────────────
-const COLS = ['#22d3ee','#a78bfa','#34d399','#fbbf24','#f472b6','#fb923c','#60a5fa','#f87171','#4ade80','#e879f9'];
-const QCOL = {Q1:'#22d3ee',Q2:'#34d399',Q3:'#fbbf24',Q4:'#f87171'};
-const OA_COL = {
-  gold  :{bg:'#FFF3CD',fg:'#7D5A00',lbl:'Gold OA',  tip:'Publicado en revista 100% Open Access'},
-  green :{bg:'#D6EDDA',fg:'#006400',lbl:'Green OA', tip:'Copia libre en repositorio o preprint'},
-  hybrid:{bg:'#D4E4F4',fg:'#1a5276',lbl:'Hybrid OA',tip:'Artículo OA en revista de suscripción'},
-  bronze:{bg:'#FDEBD0',fg:'#7d4e00',lbl:'Bronze OA',tip:'Libre en web del editor sin licencia'},
-  closed:{bg:'var(--dim)',fg:'var(--muted)',lbl:'Cerrado',tip:'Sin acceso libre disponible'},
-};
-const TIPO_COL = {'Fondecyt Regular':'#22d3ee','Fondecyt Iniciación':'#a78bfa','Fondecyt Postdoctorado':'#fbbf24','Fondef':'#fb923c','Anillo':'#f472b6','Basal':'#34d399'};
-let invs=[], jsonData=null, sel=0;
-
-// ─── EXCEL TEMPLATE DOWNLOAD ──────────────────
-function downloadTemplate() {
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([
-    ['Nombre','Apellido','Unidad Académica'],
-    ['Raimundo','Olfos Ayarza','Instituto de Matemática'],
-    ['Carolina','Guerrero Ortiz','Instituto de Matemática'],
-    ['Astrid','Morales Soto','Instituto de Matemática'],
-  ]);
-  ws['!cols'] = [{wch:16},{wch:20},{wch:24}];
-  XLSX.utils.book_append_sheet(wb, ws, 'Investigadores');
-  XLSX.writeFile(wb, 'Plantilla_Investigadores.xlsx');
-}
-
-// ─── FILE HANDLERS ───────────────────────────
-function handleDrop(ev) {
-  ev.preventDefault();
-  document.getElementById('dz').classList.remove('drag');
-  if (ev.dataTransfer.files[0]) handleFile(ev.dataTransfer.files[0]);
-}
-
-function handleFile(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const wb = XLSX.read(e.target.result, {type:'array'});
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-    // Detect header row (contains 'nombre' or 'apellido')
-    let hi = rows.findIndex(r => r.some(c => /nombre|apellido/i.test(String(c))));
-    if (hi < 0) hi = 0;
-    const headers = rows[hi].map(h => String(h).trim().toLowerCase());
-    const get = (row, ...keys) => {
-      for (const k of keys) {
-        const i = headers.findIndex(h => h.includes(k));
-        if (i >= 0 && row[i]) return String(row[i]).trim();
-      }
-      return '';
-    };
-    const dataRows = rows.slice(hi+1).filter(r => r.some(c => c));
-    const rawList = dataRows.map(r => {
-      // Soporte para "Nombre Completo" como columna única
-      let nom = get(r,'nombre') || '';
-      let ape = get(r,'apellido') || '';
-      if (nom && !ape) { // Si solo hay nombre completo, separar
-        const parts = nom.split(/\s+/);
-        nom = parts[0];
-        ape = parts.slice(1).join(' ');
-      }
-      return {
-        nombre   : nom,
-        apellido : ape,
-
-        ua       : get(r,'unidad','ua','departamento','escuela','instituto') || 'Sin especificar',
-        // Si la planilla ya trae IDs (compatibilidad hacia atrás)
-        scopus_id: cleanId(get(r,'scopus')),
-        orcid_id : cleanId(get(r,'orcid','n° orcid')),
-        research_id: get(r,'research'),
-        linea    : get(r,'linea','línea','investigacion'),
-      };
-    }).filter(r => r.nombre || r.apellido);
-    startProcessing(rawList);
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-const cleanId = v => {
-  const s = String(v||'').replace(/\n|\r/g,'').trim();
-  return ['sin perfil','nan','none',''].includes(s.toLowerCase()) ? '' : s;
-};
-
-// ─── JSON MERGE ───────────────────────────────
-function loadJSON(file) {
-  if (!file) return;
-  new Promise(res => {
-    const r = new FileReader();
-    r.onload = e => res(e.target.result);
-    r.readAsText(file);
-  }).then(txt => {
-    try {
-      jsonData = JSON.parse(txt);
-      if (invs.length > 0) { mergeJSON(); selectInv(sel); buildSidebar(); }
-      toast(`✅ JSON fusionado — ${jsonData.investigadores?.length||0} investigadores con datos Scopus/ANID`);
-    } catch(e) { toast('❌ Error al leer el JSON', true); }
-  });
-}
-
-// ── Normalización de texto para comparación ──────────────────────────────
-function normTxt(s) {
-  if (!s) return '';
-  // NFC + minúsculas + quitar acentos + quitar guiones
-  return (s.normalize('NFC')
-           .toLowerCase()
-           .normalize('NFD')
-           .replace(/[\u0300-\u036f]/g,'')  // quitar diacríticos
-           .replace(/[-_]/g,' ')              // guión → espacio
-           .replace(/\s+/g,' ')
-           .trim());
-}
-
-function simNombre(a, b) {
-  // Similitud simple: qué fracción de palabras de 'a' aparecen en 'b'
-  const pa = normTxt(a).split(' ').filter(w=>w.length>2);
-  const nb = normTxt(b);
-  if (!pa.length) return 0;
-  const hits = pa.filter(w=>nb.includes(w)).length;
-  return hits / pa.length;
-}
-
-function mergeJSON() {
-  if (!jsonData?.investigadores) return;
-  let emparejados = 0;
-
-  invs.forEach(inv => {
-    const ncInv    = normTxt(inv.nombre_completo || (inv.nombre+' '+inv.apellido));
-    const apInv    = normTxt(inv.apellido  || '');
-    const nomInv   = normTxt(inv.nombre    || '');
-    const scopusInv= (inv.scopus_id || '').trim();
-    const orcidInv = (inv.orcid_id  || '').trim();
-
-    // Intentar encontrar el mejor match
-    let bestMatch = null;
-    let bestScore = 0;
-
-    jsonData.investigadores.forEach(j => {
-      const ncJ     = normTxt(j.nombre_completo || '');
-      const scopusJ = (j.scopus_id || '').trim();
-      const orcidJ  = (j.orcid_id  || '').trim();
-      let score = 0;
-
-      // 1. Match exacto por ID (máxima prioridad)
-      if (scopusInv && scopusJ && scopusInv === scopusJ) score = 100;
-      else if (orcidInv && orcidJ && orcidInv === orcidJ) score = 95;
-      else {
-        // 2. Similitud de nombre completo
-        const simFull = simNombre(ncInv, ncJ);
-        // 3. Apellido presente en JSON
-        const apEnJ   = apInv && ncJ.includes(apInv) ? 0.4 : 0;
-        // 4. Partes del apellido compuesto
-        const partAp  = apInv.split(' ')
-          .filter(p=>p.length>3)
-          .filter(p=>ncJ.includes(p)).length /
-          Math.max(1, apInv.split(' ').filter(p=>p.length>3).length);
-        // 5. Partes del nombre presentes
-        const partNom = nomInv.split(' ')
-          .filter(p=>p.length>2)
-          .filter(p=>ncJ.includes(p)).length /
-          Math.max(1, nomInv.split(' ').filter(p=>p.length>2).length);
-
-        score = Math.max(simFull, apEnJ + partAp*0.3 + partNom*0.2) * 80;
-      }
-
-      if (score > bestScore) { bestScore = score; bestMatch = j; }
-    });
-
-    // Umbral mínimo de confianza: 40 puntos
-    if (!bestMatch || bestScore < 40) {
-      console.warn(`⚠ Sin match JSON para: ${inv.nombre_completo} (score=${bestScore.toFixed(0)})`);
-      return;
-    }
-
-    // ── Aplicar datos del JSON al investigador ──────────────────────────
-    // Usar ?? para permitir 0 (no solo truthy)
-    inv.h_index    = bestMatch.h_index    ?? inv.h_index;
-    inv.documentos = bestMatch.documentos ?? inv.documentos;
-    inv.citas      = bestMatch.citas      ?? inv.citas;
-    inv.coautores  = bestMatch.coautores  ?? inv.coautores;
-    inv.obras_orcid= bestMatch.obras_orcid?? inv.obras_orcid;
-    inv.n_oa       = bestMatch.n_oa       ?? inv.n_oa;
-    if (bestMatch.areas)        inv.areas        = bestMatch.areas;
-    if (bestMatch.empleos_actuales) inv.empleos_actuales = bestMatch.empleos_actuales;
-    if (bestMatch.educacion)    inv.educacion    = bestMatch.educacion;
-    if (bestMatch.linea)        inv.linea        = bestMatch.linea;
-    if (bestMatch.openalex_id)  inv.openalex_id  = bestMatch.openalex_id;
-    if (bestMatch.publicaciones?.length)  inv.publicaciones  = bestMatch.publicaciones;
-    if (bestMatch.colaboraciones?.length) inv.coautores_list = bestMatch.colaboraciones;
-    if (bestMatch.proyectos_anid?.length) inv.proyectos_anid = bestMatch.proyectos_anid;
-    if (bestMatch.top_keywords?.length)  inv.top_keywords      = bestMatch.top_keywords;
-    if (bestMatch.oa_topics?.length)     inv.oa_topics         = bestMatch.oa_topics;
-    if (bestMatch.pubs_total)            inv.pubs_total        = bestMatch.pubs_total;
-    if (bestMatch.pubs_5a != null)       inv.pubs_5a           = bestMatch.pubs_5a;
-    if (bestMatch.oa_5a   != null)       inv.oa_5a             = bestMatch.oa_5a;
-    if (bestMatch.oa_counts_by_year?.length) inv.oa_counts_by_year = bestMatch.oa_counts_by_year;
-    // IDs: tomar del JSON si no los tenemos
-    if (!inv.scopus_id && bestMatch.scopus_id) {
-      inv.scopus_id = bestMatch.scopus_id; inv.scopus_src='json';
-    }
-    if (!inv.orcid_id && bestMatch.orcid_id) {
-      inv.orcid_id = bestMatch.orcid_id; inv.orcid_src='json';
-    }
-    emparejados++;
-  });
-
-  console.log(`JSON fusionado: ${emparejados}/${invs.length} investigadores emparejados`);
-  // Log detallado para diagnóstico
-  invs.forEach(inv=>{
-    const pubs = inv.publicaciones?.length||0;
-    const coauts = inv.coautores_list?.length||0;
-    if (!inv.scopus_id) console.warn(`⚠ Sin Scopus ID: ${inv.nombre_completo}`);
-    else console.log(`  ✓ ${inv.nombre_completo}: ${pubs} pubs, ${coauts} coauts, h=${inv.h_index}`);
-  });
-}
-
-// ─── PROCESSING ───────────────────────────────
-async function startProcessing(rawList) {
-  document.getElementById('up').style.display = 'none';
-  document.getElementById('proc').style.display = 'block';
-  document.getElementById('btn-rst').classList.remove('hidden');
-  invs = [];
-  const list = document.getElementById('proc-list');
-  list.innerHTML = '';
-
-  for (let i = 0; i < rawList.length; i++) {
-    const row = rawList[i];
-    const color = COLS[i % COLS.length];
-    const initials = (row.nombre[0]||'') + ((row.apellido||'')[0]||'');
-    const inv = {
-      ...row,
-      nombre_completo: `${row.nombre} ${row.apellido}`.trim(),
-      color, initials,
-      h_index:0, documentos:0, citas:0, coautores:0,
-      areas:'', empleos_actuales:'', educacion:'', obras_orcid:0,
-      publicaciones:[], coautores_list:[], proyectos_anid:[], top_keywords:[], oa_topics:[], oa_counts_by_year:[], pubs_total:0, pubs_5a:0, oa_5a:0,
-      orcid_src: row.orcid_id ? 'planilla' : 'descubierto',
-      scopus_src: row.scopus_id ? 'planilla' : 'pendiente',
+    let gestor_refs = [];
+    const gestor_campos = {
+        'libro':       [{id:'autor',l:'Autor(es)',p:'Apellido, N.'},{id:'anio',l:'Año',p:'2020'},{id:'titulo',l:'Título',p:''},{id:'editorial',l:'Editorial',p:'',opt:true},{id:'isbn',l:'ISBN',p:'Ej. 9781292027661',opt:true}],
+        'capitulo':    [{id:'autor',l:'Autor Capítulo',p:''},{id:'anio',l:'Año',p:''},{id:'tituloCap',l:'Título Capítulo',p:''},{id:'editor',l:'Editores',p:'In J. Doe (Ed.)'},{id:'tituloLibro',l:'Título Libro',p:''},{id:'paginas',l:'Páginas',p:'pp. 20-30'}],
+        'revista':     [{id:'autor',l:'Autor(es)',p:''},{id:'anio',l:'Año',p:''},{id:'tituloArt',l:'Título Artículo',p:''},{id:'revista',l:'Nombre Revista',p:''},{id:'volumen',l:'Vol.',p:'',opt:true},{id:'numero',l:'Núm.',p:'',opt:true},{id:'paginas',l:'Págs.',p:'',opt:true},{id:'doi',l:'DOI',p:'',opt:true}],
+        'web':         [{id:'autor',l:'Autor/Org',p:''},{id:'fecha',l:'Fecha',p:''},{id:'titulo',l:'Título Web',p:''},{id:'sitio',l:'Sitio',p:''},{id:'url',l:'URL',p:''}],
+        'youtube':     [{id:'autor',l:'Canal',p:''},{id:'fecha',l:'Fecha',p:''},{id:'titulo',l:'Título Video',p:''},{id:'url',l:'URL',p:''}],
+        'ia':          [{id:'autor',l:'Autor',p:''},{id:'anio',l:'Año',p:''},{id:'modelo',l:'Modelo',p:'ChatGPT'},{id:'url',l:'URL',p:''}],
+        'tesis':       [{id:'autor',l:'Autor',p:'Apellido, N.'},{id:'anio',l:'Año',p:''},{id:'titulo',l:'Título de la tesis',p:''},{id:'nivelTesis',l:'Nivel (Ej: Tesis de maestría)',p:'Tesis de maestría'},{id:'institucion',l:'Institución',p:'Universidad de...'},{id:'pais',l:'País',p:'Chile',opt:true}],
+        'informe':     [{id:'autor',l:'Autor / Institución',p:'Apellido, N. o Organización'},{id:'anio',l:'Año',p:''},{id:'titulo',l:'Título del informe',p:''},{id:'numInforme',l:'N.º de informe',p:'Ej. Rep. N.º 5',opt:true},{id:'editorial',l:'Editorial / Institución',p:''}],
+        'conferencia': [{id:'autor',l:'Autor(es)',p:'Apellido, N.'},{id:'anio',l:'Año',p:''},{id:'titulo',l:'Título de la ponencia',p:''},{id:'evento',l:'Nombre del evento',p:''},{id:'ciudad',l:'Ciudad, País',p:'Ej. Santiago, Chile',opt:true}]
     };
 
-    // DOM item
-    const el = document.createElement('div');
-    el.className = 'pi'; el.id = `pi-${i}`;
-    el.innerHTML = `
-      <div class="pi-top">
-        <div class="av" style="background:${color}22;border:1px solid ${color}44;color:${color}">${initials}</div>
-        <div style="flex:1;min-width:0">
-          <div class="pi-name">${inv.nombre_completo}</div>
-          <div class="pi-sub">${inv.ua}</div>
-        </div>
-      </div>
-      <div class="pi-steps" id="steps-${i}">
-        <span class="step s-wait" id="s-orcid-${i}">ORCID…</span>
-        <span class="step s-wait" id="s-orcid-p-${i}">Perfil ORCID…</span>
-        <span class="step s-wait" id="s-scopus-${i}">Scopus (JSON)</span>
-        <span class="step s-wait" id="s-anid-${i}">ANID (JSON)</span>
-      </div>
-      <div class="pbar"><div class="pbar-fill" id="bar-${i}" style="background:${color};width:0"></div></div>`;
-    list.appendChild(el);
-
-    // ── Step 1: descubrir ORCID ──────────────
-    setStep(i,'orcid','run','Buscando ORCID…');
-    setBar(i, 15);
-    if (inv.orcid_id) {
-      setStep(i,'orcid','ok',`✓ ORCID (planilla)`);
-    } else {
-      const found = await discoverORCID(inv.nombre, inv.apellido);
-      if (found) {
-        inv.orcid_id = found; inv.orcid_src = 'descubierto';
-        setStep(i,'orcid','ok',`✓ ${found}`);
-      } else {
-        setStep(i,'orcid','fail','ORCID no encontrado');
-      }
+    function gestor_actualizarFormulario() {
+        const tipo = document.getElementById('tipoRecurso').value;
+        const div = document.getElementById('camposDinamicos');
+        div.innerHTML = '';
+        if(!tipo || !gestor_campos[tipo]) return;
+        gestor_campos[tipo].forEach(c => {
+            div.innerHTML += `<div class="col-md-6"><label class="form-label">${c.l} ${c.opt?'<small class="text-muted">(Opcional)</small>':'<span class="req-star">*</span>'}</label><input type="text" class="form-control" id="g_${c.id}" placeholder="${c.p}"></div>`;
+        });
     }
-    setBar(i, 35);
 
-    // ── Step 2: perfil ORCID ────────────────
-    setStep(i,'orcid-p','run','Leyendo perfil…');
-    if (inv.orcid_id) {
-      const od = await fetchORCID(inv.orcid_id);
-      Object.assign(inv, od);
-      setStep(i,'orcid-p','ok',`✓ ${inv.obras_orcid} obras`);
-    } else {
-      setStep(i,'orcid-p','fail','Sin perfil ORCID');
+    function limpiarDatosProfundo(titulo, autor, editorial, fecha) {
+        let t = titulo || ""; let a = autor || ""; let e = editorial || ""; let f = fecha || "";
+        t = t.replace(/\b(PKG|PGK|PACK|PACKAGE|&.*ACC.*|MYMATHLAB.*|ACCESS.*CARD|\+.*CD)\b/gi, ' ').trim();
+        t = t.replace(/^[\s&\-\+\.]+|[\s&\-\+\.]+$/g, '');
+        if (!/[a-z]/.test(t) && /[A-Z]/.test(t)) t = t.toLowerCase().replace(/(?:^|\s|["'([{])+\S/g, match => match.toUpperCase());
+        if (a && !/[a-z]/.test(a) && /[A-Z]/.test(a)) a = a.toLowerCase().replace(/(?:^|\s|["'([{])+\S/g, match => match.toUpperCase());
+        const yearMatch = f.match(/\b(19|20)\d{2}\b/); f = yearMatch ? yearMatch[0] : f;
+        // Solo borrar el autor si el campo completo ES una editorial (no si simplemente contiene la palabra)
+        // Un autor real tiene coma (Apellido, N.) o "&" entre varios. Una editorial no.
+        const autoresProhibidos = ['PEARSON', 'CENGAGE', 'MCGRAW-HILL', 'MCGRAW HILL', 'WILEY', 'OXFORD UNIVERSITY PRESS', 'EDITORIAL', 'PEARSON EDUCATION', 'ADDISON-WESLEY', 'PRENTICE HALL', 'PRENTICE-HALL'];
+        const aUpper = a.toUpperCase().trim();
+        const esEditorial = autoresProhibidos.some(bad => aUpper === bad || aUpper.startsWith(bad + ',') || aUpper.startsWith(bad + ' ') && !a.includes(','));
+        if (esEditorial) a = "";
+        return { titulo: t, autor: a, editorial: e, anio: f };
     }
-    setBar(i, 60);
 
-    // ── Step 3 & 4: Scopus + ANID (desde JSON) ─
-    if (jsonData?.investigadores) {
-      const match = jsonData.investigadores.find(j => {
-        const jf = (j.nombre_completo||'').toLowerCase();
-        return jf.includes(inv.apellido.toLowerCase()) ||
-               inv.apellido.toLowerCase().split(/\s+/).filter(p=>p.length>3).some(p=>jf.includes(p));
-      });
-      if (match) {
-        if (match.h_index || match.citas || match.documentos) {
-          inv.h_index=match.h_index||0; inv.documentos=match.documentos||0; inv.pubs_total=match.pubs_total||match.documentos||0;
-          inv.citas=match.citas||0; inv.coautores=match.coautores||0;
-          inv.areas=match.areas||''; inv.publicaciones=match.publicaciones||[];
-          inv.coautores_list=match.colaboraciones||[];
-          if (!inv.scopus_id && match.scopus_id) { inv.scopus_id=match.scopus_id; inv.scopus_src='json'; }
-          setStep(i,'scopus','ok',`✓ h=${inv.h_index}`);
-        } else { setStep(i,'scopus','fail','Sin métricas'); }
-        if (match.proyectos_anid?.length) {
-          inv.proyectos_anid = match.proyectos_anid;
-          setStep(i,'anid','ok',`✓ ${inv.proyectos_anid.length} proyectos`);
-        } else { setStep(i,'anid','fail','Sin proyectos'); }
-      } else {
-        setStep(i,'scopus','fail','No emparejado');
-        setStep(i,'anid','fail','No emparejado');
-      }
-    } else {
-      setStep(i,'scopus','wait','Requiere JSON');
-      setStep(i,'anid','wait','Requiere JSON');
+    async function gestor_buscarMetadatos() {
+        const input = document.getElementById('inputMagic').value.trim();
+        const btn = document.getElementById('btnBuscar');
+        if(!input) return alert("Ingresa DOI o ISBN");
+        
+        btn.innerHTML = '⌛ Buscando...'; btn.disabled = true;
+        try {
+            const isDoi = input.includes('10.') && input.includes('/');
+            const clean = input.replace(/https?:\/\/(dx\.)?doi\.org\//, '').trim();
+            const cleanIsbn = input.replace(/[-\s]/g, '');
+            let data = null, tipo = '';
+
+            if(isDoi) {
+                try {
+                    const r = await fetch(`https://api.crossref.org/works/${clean}`);
+                    if(r.ok) {
+                        const j = (await r.json()).message;
+                        tipo = 'revista';
+                        data = { autor: j.author?.map(a=>`${a.family}, ${a.given?.[0]}.`).join(' & '), anio: j.published?.['date-parts']?.[0]?.[0], tituloArt: j.title?.[0], revista: j['container-title']?.[0], volumen: j.volume, numero: j.issue, paginas: j.page, doi: `https://doi.org/${j.DOI}` };
+                    } else throw new Error();
+                } catch(e) {
+                    const r2 = await fetch(`https://api.datacite.org/dois/${clean}`);
+                    if(!r2.ok) throw new Error("No encontrado");
+                    const j2 = (await r2.json()).data.attributes;
+                    tipo = 'revista';
+                    data = { tituloArt: j2.titles?.[0]?.title, autor: j2.creators?.map(c=>c.name).join(' & '), anio: j2.publicationYear, revista: j2.publisher || 'arXiv', doi: `https://doi.org/${j2.doi}` };
+                }
+            } else {
+                // Estrategia multicapa para ISBN:
+                // 1. OpenLibrary (mejor para ediciones latinoamericanas)
+                // 2. Google Books con restricción de idioma español
+                // 3. Google Books sin restricción (fallback general)
+
+                let rawData = null;
+
+                // --- Fuente 1: OpenLibrary ---
+                try {
+                    const rOL = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&jscmd=data&format=json`);
+                    const jOL = await rOL.json();
+                    const key = `ISBN:${cleanIsbn}`;
+                    if (jOL[key]) {
+                        const infoOL = jOL[key];
+                        const olData = limpiarDatosProfundo(
+                            infoOL.title,
+                            infoOL.authors?.map(a => a.name).join(' & '),
+                            infoOL.publishers?.[0]?.name,
+                            infoOL.publish_date
+                        );
+                        if (olData.titulo) rawData = { fuente: 'OL', ...olData };
+                    }
+                } catch(e) {}
+
+                // --- Fuente 2: Google Books con preferencia en español ---
+                if (!rawData || !rawData.autor) {
+                    try {
+                        let rG = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}&langRestrict=es`);
+                        let jG = await rG.json();
+                        // Si no hay resultado en español, buscar sin restricción
+                        if (!jG.items) {
+                            rG = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
+                            jG = await rG.json();
+                        }
+                        if (jG.items) {
+                            // Preferir el resultado cuyo idioma sea español si hay varios
+                            const items = jG.items;
+                            const esItem = items.find(it => it.volumeInfo?.language === 'es') || items[0];
+                            const info = esItem.volumeInfo;
+                            const gData = limpiarDatosProfundo(info.title, info.authors?.join(' & '), info.publisher, info.publishedDate);
+                            // Usar Google Books si OpenLibrary no tenía autor o no tenía título
+                            if (!rawData) {
+                                rawData = { fuente: 'GB', ...gData };
+                            } else {
+                                // Combinar: preferir el título/autor con más información
+                                if (!rawData.autor && gData.autor) rawData.autor = gData.autor;
+                                if (!rawData.anio  && gData.anio)  rawData.anio  = gData.anio;
+                                if (!rawData.editorial && gData.editorial) rawData.editorial = gData.editorial;
+                            }
+                        }
+                    } catch(e) {}
+                }
+
+                if (rawData && rawData.titulo) {
+                    tipo = 'libro';
+                    data = { titulo: rawData.titulo, autor: rawData.autor, anio: rawData.anio, editorial: rawData.editorial };
+                } else {
+                    throw new Error("ISBN no encontrado en ninguna fuente.");
+                }
+            }
+
+            if(data) {
+                document.getElementById('tipoRecurso').value = tipo;
+                gestor_actualizarFormulario();
+                setTimeout(() => { 
+                    for(let k in data) { 
+                        const el = document.getElementById(`g_${k}`); 
+                        if(el) {
+                            if(k === 'titulo' || k === 'tituloArt') el.value = limpiarDatosProfundo(data[k], '', '', '').titulo;
+                            else if(k === 'autor') el.value = limpiarDatosProfundo('', data[k], '', '').autor;
+                            else el.value = data[k] || ''; 
+                        }
+                    }
+                    // Rellenar ISBN automáticamente si vino de búsqueda por ISBN
+                    if (!isDoi) {
+                        const isbnEl = document.getElementById('g_isbn');
+                        if (isbnEl) isbnEl.value = cleanIsbn;
+                    }
+                    // Guardar en historial
+                    const tituloEncontrado = data.titulo || data.tituloArt || 'Sin título';
+                    gestor_agregarHistorial(input, tituloEncontrado);
+                    // Revisar el campo autor tal como quedó en pantalla (después de limpiar)
+                    const autorEnPantalla = document.getElementById('g_autor')?.value || '';
+                    if (autorEnPantalla === '') {
+                        alert("⚠️ El autor no se encontró en las fuentes consultadas. Por favor ingrésalo manualmente.");
+                    } else {
+                        alert("✅ ¡Datos encontrados!");
+                    }
+                }, 100);
+            }
+        } catch(e) { alert("Error: " + e.message); }
+        finally { btn.innerHTML = '🪄 Buscar y Rellenar'; btn.disabled = false; }
     }
-    setBar(i, 100);
-    invs.push(inv);
-    await sleep(200);
-  }
 
-  document.getElementById('proc-done').classList.remove('hidden');
-  document.getElementById('proc-sub').textContent =
-    `${invs.length} investigadores procesados · ${invs.filter(i=>i.orcid_id).length} con ORCID`;
-}
+    function gestor_agregarReferencia() {
+        const tipo = document.getElementById('tipoRecurso').value;
+        if(!tipo) return;
+        const getVal = (id) => { const el = document.getElementById(`g_${id}`); return el ? el.value.trim() : ''; };
+        let ref = '';
 
-const setBar  = (i,v) => { const b=document.getElementById(`bar-${i}`); if(b) b.style.width=v+'%'; };
-const setStep = (i,k,st,lbl) => {
-  const el=document.getElementById(`s-${k}-${i}`);
-  if(!el) return;
-  el.className=`step s-${st}`;
-  el.textContent=lbl;
-};
-const sleep = ms => new Promise(r=>setTimeout(r,ms));
-
-// ─── ORCID DISCOVERY ─────────────────────────
-async function discoverORCID(nombre, apellido) {
-  const inst = document.getElementById('cfg-inst').value || '';
-  // Intentar con apellido compuesto primero, luego solo primer apellido
-  const surnames = [apellido, apellido.split(/\s+/)[0]].filter((v,i,a)=>a.indexOf(v)===i);
-  for (const sn of surnames) {
-    try {
-      const q = `family-name:${encodeURIComponent(sn)}+AND+given-names:${encodeURIComponent(nombre)}`;
-      const r = await fetch(`https://pub.orcid.org/v3.0/search/?q=${q}&rows=5`,
-        {headers:{'Accept':'application/json'}});
-      if (!r.ok) continue;
-      const d = await r.json();
-      const results = d.result||[];
-      if (!results.length) continue;
-      // Si hay un único resultado, tomarlo directamente
-      if (results.length === 1)
-        return results[0]['orcid-identifier']?.path || null;
-      // Si hay varios, intentar filtrar por institución desde ORCID
-      return results[0]['orcid-identifier']?.path || null;
-    } catch { /* CORS u otro error */ }
-    await sleep(300);
-  }
-  return null;
-}
-
-// ─── ORCID PROFILE ───────────────────────────
-async function fetchORCID(id) {
-  if (!id) return {};
-  const h = {'Accept':'application/json'};
-  const res = {};
-  try {
-    const [er,dr,wr] = await Promise.all([
-      fetch(`https://pub.orcid.org/v3.0/${id}/employments`,{headers:h}),
-      fetch(`https://pub.orcid.org/v3.0/${id}/educations`,{headers:h}),
-      fetch(`https://pub.orcid.org/v3.0/${id}/works`,{headers:h}),
-    ]);
-    if (er.ok) {
-      const d=await er.json();
-      const emp=[];
-      for(const g of d['affiliation-group']||[]){
-        for(const s of g.summaries||[]){
-          const e=s['employment-summary']||{};
-          if(!e['end-date']){
-            const org=e.organization?.name||'';
-            const role=e['role-title']||'';
-            const dep=e['department-name']||'';
-            emp.push([role,dep,org].filter(Boolean).join(' · '));
-          }
+        if (tipo === 'libro') {
+            ref = `${getVal('autor')} (${getVal('anio')}). <i>${getVal('titulo')}</i>. ${getVal('editorial')}.`;
+        } else if (tipo === 'capitulo') {
+            const pags = getVal('paginas') ? `, ${getVal('paginas')}` : '';
+            ref = `${getVal('autor')} (${getVal('anio')}). ${getVal('tituloCap')}. ${getVal('editor')}, <i>${getVal('tituloLibro')}</i>${pags}. `;
+        } else if (tipo === 'revista') {
+            ref = `${getVal('autor')} (${getVal('anio')}). ${getVal('tituloArt')}. <i>${getVal('revista')}</i>. ${getVal('doi')}`;
+        } else if (tipo === 'tesis') {
+            const pais = getVal('pais') ? `, ${getVal('pais')}` : '';
+            ref = `${getVal('autor')} (${getVal('anio')}). <i>${getVal('titulo')}</i> [${getVal('nivelTesis')}]. ${getVal('institucion')}${pais}.`;
+        } else if (tipo === 'informe') {
+            const num = getVal('numInforme') ? ` (${getVal('numInforme')})` : '';
+            ref = `${getVal('autor')} (${getVal('anio')}). <i>${getVal('titulo')}</i>${num}. ${getVal('editorial')}.`;
+        } else if (tipo === 'conferencia') {
+            const ciudad = getVal('ciudad') ? `, ${getVal('ciudad')}` : '';
+            ref = `${getVal('autor')} (${getVal('anio')}). <i>${getVal('titulo')}</i>. ${getVal('evento')}${ciudad}.`;
+        } else {
+            ref = `${getVal('autor')} (${getVal('fecha')||getVal('anio')}). <i>${getVal('titulo')||getVal('tituloCap')}</i>. ${getVal('url')}`;
         }
-      }
-      res.empleos_actuales=emp.slice(0,2).join(' | ');
+
+        ref = ref.trim().replace(/\s*\.+\s*\.+/g, '.');
+        if(!ref.endsWith('.')) ref += '.';
+        if(ref.startsWith(" (")) ref = ref.substring(1);
+
+        // ISBN: solo se captura si el campo existe (tipo libro)
+        const isbnEl = document.getElementById('g_isbn');
+        const isbn = isbnEl ? isbnEl.value.trim() : '';
+        
+        gestor_refs.push({ "Carrera":document.getElementById('g_carrera').value, "Clave":document.getElementById('g_clave').value, "Asignatura":document.getElementById('g_nombre').value, "Tipo":document.getElementById('tipoBiblio').value, "Referencia": ref, "ISBN": isbn });
+        gestor_renderTabla();
+        document.getElementById('camposDinamicos').innerHTML='';
+        document.getElementById('tipoRecurso').value='';
     }
-    if (dr.ok) {
-      const d=await dr.json();
-      const ed=[];
-      for(const g of (d['affiliation-group']||[]).slice(0,3)){
-        for(const s of g.summaries||[]){
-          const e=s['education-summary']||{};
-          const org=e.organization?.name||'';
-          const role=e['role-title']||'';
-          const año=(e['end-date']?.year?.value)||'';
-          ed.push(`${role} · ${org}${año?' ('+año+')':''}`);
+
+    function gestor_renderTabla() {
+        const tbody = document.querySelector('#tablaGestor tbody');
+        tbody.innerHTML = '';
+        gestor_refs.forEach((r, i) => tbody.innerHTML += `
+            <tr>
+                <td>${r.Tipo}</td>
+                <td>${r.Referencia}</td>
+                <td><small class="text-muted">${r.ISBN || '—'}</small></td>
+                <td><button class="btn btn-sm btn-danger" onclick="gestor_eliminar(${i})">X</button></td>
+            </tr>`);
+    }
+    function gestor_eliminar(i) { gestor_refs.splice(i,1); gestor_renderTabla(); }
+
+    function gestor_exportarExcel() {
+        if(!gestor_refs.length) return alert("Sin datos");
+
+        const wb = XLSX.utils.book_new();
+        const ws = {};
+
+        // Detectar carrera (usar la primera no vacía)
+        const carrera = gestor_refs.find(r => r.Carrera && r.Carrera.trim())?.Carrera?.trim() || '';
+
+        // --- FILA 1: Carrera o Programa ---
+        ws['A1'] = { v: 'Carrera o Programa: ' + carrera, t: 's' };
+
+        // --- FILA 2: Encabezados principales ---
+        ws['A2'] = { v: 'Clave Asignatura',              t: 's' };
+        ws['B2'] = { v: 'Nombre Asignatura',             t: 's' };
+        ws['C2'] = { v: 'Tipo Bibliografía',             t: 's' };
+        ws['D2'] = { v: 'Referencias',                   t: 's' };
+        ws['E2'] = { v: 'Disponibilidad en Bibliotecas', t: 's' };
+        ws['J2'] = { v: 'Observaciones',                 t: 's' };
+        ws['K2'] = { v: 'Proveedor',                     t: 's' };
+        ws['L2'] = { v: 'Valor pesos',                   t: 's' };
+
+        // --- FILA 3: Sub-encabezados disponibilidad ---
+        ws['E3'] = { v: 'LIBROS N° de ejemplares (cantidad - año)',              t: 's' };
+        ws['I3'] = { v: 'Artículo Científico Disponible en (papel - on line)',   t: 's' };
+
+        // --- FILA 4: Sub-columnas E-H ---
+        ws['E4'] = { v: 'Btca UA',                t: 's' };
+        ws['F4'] = { v: 'Otras Btcas',            t: 's' };
+        ws['G4'] = { v: 'Total',                  t: 's' };
+        ws['H4'] = { v: 'Disponible on line URL', t: 's' };
+
+        // --- DATOS desde fila 5 ---
+        let fila = 5;
+
+        // Agrupar por asignatura — normalizar clave para evitar grupos separados por datos vacíos
+        const grupos = {};
+        gestor_refs.forEach(r => {
+            // Usar clave+asignatura, pero si alguna está vacía usar lo que haya
+            const clave      = (r.Clave      || '').trim();
+            const asignatura = (r.Asignatura || '').trim();
+            const key = clave + '||' + asignatura;
+            if (!grupos[key]) grupos[key] = {
+                clave,
+                asignatura,
+                basica:         [],
+                complementaria: []
+            };
+            if ((r.Tipo || '').toLowerCase().includes('comp')) {
+                grupos[key].complementaria.push(r);
+            } else {
+                grupos[key].basica.push(r);
+            }
+        });
+
+        Object.values(grupos).forEach(grupo => {
+            // Bloque BÁSICA
+            if (grupo.basica.length) {
+                ws[`C${fila}`] = { v: 'básica', t: 's' };
+                fila++;
+                grupo.basica.forEach(r => {
+                    const refLimpia = r.Referencia.replace(/<[^>]*>?/gm, '').replace(/\s*\.+\s*\.+/g, '.');
+                    ws[`A${fila}`] = { v: grupo.clave,      t: 's' };
+                    ws[`B${fila}`] = { v: grupo.asignatura, t: 's' };
+                    ws[`C${fila}`] = { v: '',               t: 's' };
+                    ws[`D${fila}`] = { v: refLimpia,        t: 's' };
+                    ws[`E${fila}`] = { v: '',               t: 's' };
+                    ws[`F${fila}`] = { v: '',               t: 's' };
+                    ws[`G${fila}`] = { v: '',               t: 's' };
+                    ws[`H${fila}`] = { v: r.ISBN || '',     t: 's' };
+                    if (r.Observaciones) ws[`J${fila}`] = { v: r.Observaciones, t: 's' };
+                    fila++;
+                });
+                fila++;
+            }
+
+            // Bloque COMPLEMENTARIA
+            if (grupo.complementaria.length) {
+                ws[`C${fila}`] = { v: 'complementaria', t: 's' };
+                fila++;
+                grupo.complementaria.forEach(r => {
+                    const refLimpia = r.Referencia.replace(/<[^>]*>?/gm, '').replace(/\s*\.+\s*\.+/g, '.');
+                    ws[`A${fila}`] = { v: grupo.clave,      t: 's' };
+                    ws[`B${fila}`] = { v: grupo.asignatura, t: 's' };
+                    ws[`C${fila}`] = { v: '',               t: 's' };
+                    ws[`D${fila}`] = { v: refLimpia,        t: 's' };
+                    ws[`E${fila}`] = { v: '',               t: 's' };
+                    ws[`F${fila}`] = { v: '',               t: 's' };
+                    ws[`G${fila}`] = { v: '',               t: 's' };
+                    ws[`H${fila}`] = { v: r.ISBN || '',     t: 's' };
+                    if (r.Observaciones) ws[`J${fila}`] = { v: r.Observaciones, t: 's' };
+                    fila++;
+                });
+                fila++;
+            }
+        });
+
+        // Ancho de columnas
+        ws['!cols'] = [
+            { wch: 16 }, // A Clave
+            { wch: 30 }, // B Asignatura
+            { wch: 16 }, // C Tipo
+            { wch: 70 }, // D Referencias
+            { wch: 12 }, // E Btca UA
+            { wch: 12 }, // F Otras Btcas
+            { wch: 10 }, // G Total
+            { wch: 25 }, // H Online/ISBN
+            { wch: 30 }, // I Art. Científico
+            { wch: 25 }, // J Observaciones
+            { wch: 18 }, // K Proveedor
+            { wch: 14 }, // L Valor
+        ];
+
+        // Fusiones de celdas
+        ws['!merges'] = [
+            { s:{r:0,c:0}, e:{r:0,c:11} }, // A1:L1 Carrera
+            { s:{r:1,c:4}, e:{r:1,c:8} },  // E2:I2 Disponibilidad
+            { s:{r:2,c:4}, e:{r:2,c:7} },  // E3:H3 LIBROS
+        ];
+
+        ws['!ref'] = `A1:L${fila}`;
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Bibliografías');
+        XLSX.writeFile(wb, `Bibliografia_${carrera || 'PUCV'}.xlsx`);
+    }
+</script>
+
+<script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+    let ext_datos = []; 
+    let ext_filesProcesados = new Set();
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.backgroundColor='#e6f0ff'; });
+    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.style.backgroundColor='#f8fbff'; });
+    dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.style.backgroundColor='#f8fbff'; ext_procesarArchivos(e.dataTransfer.files); });
+    fileInput.addEventListener('change', (e) => ext_procesarArchivos(e.target.files));
+
+    function ext_procesarArchivos(files) {
+        document.getElementById('statusLog').innerText = `Procesando ${files.length} archivos...`;
+        Array.from(files).forEach(file => {
+            if (ext_filesProcesados.has(file.name)) return;
+            ext_filesProcesados.add(file.name);
+            const reader = new FileReader();
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext === 'pdf') {
+                reader.onload = async function() {
+                    try {
+                        const typedarray = new Uint8Array(this.result);
+                        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                        let fullText = '';
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            // Reconstruir líneas agrupando por posición Y (con guard para items sin transform)
+                            let lastY = null, line = '';
+                            const lines = [];
+                            for (const item of textContent.items) {
+                                if (!item.transform || typeof item.str !== 'string') continue;
+                                const y = Math.round(item.transform[5]);
+                                if (lastY !== null && Math.abs(y - lastY) > 3) {
+                                    if (line.trim()) lines.push(line.trim());
+                                    line = '';
+                                }
+                                line += item.str;
+                                lastY = y;
+                            }
+                            if (line.trim()) lines.push(line.trim());
+                            fullText += lines.join('\n') + '\n';
+                        }
+                        extraerYAcumular(fullText, file.name);
+                    } catch (e) {
+                        console.error(e);
+                        alert(`Error al leer "${file.name}": ${e.message}`);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (ext === 'docx') {
+                reader.onload = async function() {
+                    try {
+                        const result = await mammoth.convertToHtml({ arrayBuffer: this.result });
+                        extraerYAcumularDocx(result.value, file.name);
+                    } catch (e) {
+                        console.error(e);
+                        alert(`Error al leer "${file.name}": ${e.message}`);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (ext === 'txt') {
+                // Texto plano: el formato más limpio, se procesa igual que PDF
+                reader.onload = function() {
+                    extraerYAcumular(this.result, file.name);
+                };
+                reader.readAsText(file, 'UTF-8');
+            } else {
+                ext_filesProcesados.delete(file.name);
+                alert(`Formato no soportado: .${ext}\nSube programas de asignatura en PDF, Word (.docx) o texto plano (.txt).`);
+            }
+        });
+    }
+
+    // Extractor específico para DOCX — usa párrafos HTML para respetar estructura
+    function extraerYAcumularDocx(html, filename) {
+        const div = document.createElement('div');
+        div.innerHTML = html;
+
+        // FIX: combinar celdas de cada fila de tabla en un solo texto "Sigla ICI 1241"
+        // para que el regex detecte clave y nombre aunque estén en celdas separadas
+        const filasTabla = Array.from(div.querySelectorAll('tr')).map(tr =>
+            Array.from(tr.querySelectorAll('td, th'))
+                .map(td => td.textContent.trim()).filter(t => t).join(' ')
+        ).filter(t => t.length > 0);
+
+        // Párrafos normales para la bibliografía
+        const parrafos = Array.from(div.querySelectorAll('p, li')).map(el => el.textContent.trim()).filter(t => t.length > 0);
+
+        let carrera = '', clave = '', nombre = '';
+
+        // Detectar metadatos buscando en filas de tabla Y párrafos
+        [...filasTabla, ...parrafos].forEach(p => {
+            if (!clave) {
+                const m = p.match(/(?:Sigla|Código|Clave)[\s:\t,]+([A-Z]{2,6}\s*\d{3,5})/i);
+                if (m) clave = m[1].trim();
+            }
+            if (!nombre) {
+                // FIX: patrón anclado — "Nombre Asignatura" o "Nombre de la Asignatura" al inicio
+                const m = p.match(/^Nombre\s+(?:de\s+la\s+)?Asignatura[\s:\t]+(.+)/i)
+                       || p.match(/^Nombre\s+del?\s+Curso[\s:\t]+(.+)/i);
+                if (m) nombre = m[1].trim().replace(/^"|"$/g, '').substring(0, 100);
+            }
+            if (!carrera) {
+                const m = p.match(/^Carrera[\s:\t]+(.+)/i);
+                if (m) carrera = m[1].trim().substring(0, 60);
+            }
+        });
+
+        if (!nombre) nombre = filename.replace(/\.(pdf|docx|txt)$/i, '').replace(/[-_]/g, ' ').trim();
+
+        // Encontrar sección bibliografía y procesar párrafo a párrafo
+        let enBiblio = false;
+        let tipoActual = 'Básica';
+        let enTipo = false; // si ya detectamos al menos un marcador Básica/Complementaria
+
+        const esTituloBiblio = t => /(?:VI{1,3}\.?\s*)?(?:BIBLIOGRAFÍA|Referencias\s+Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)(?:\s+Y\s+.+)?$/i.test(t);
+        const esTipoBasica   = t => /(?:\d+\.\s*)?(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)/i.test(t);
+        const esTipoComp     = t => /(?:\d+\.\s*)?(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
+        const limpiarLinea   = t => t.replace(/^[\s•●\-\*✔✓►▪▸◆◉\d\.]+/, '').trim();
+
+        // Detección estricta: APA con año (Apellido, Nombre. Título. Editorial, 2020.)
+        const esRefEstricta = t => {
+            const tc = t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').trim();
+            return tc.length > 35 && /\d{4}|s\.f\./.test(tc) && /^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}[,;]/.test(tc);
+        };
+
+        // Detección laxa: cualquier línea sustancial tras un marcador Básica/Complementaria
+        // cubre formatos como "Nombre Apellido, Título, Editorial." sin año
+        const esRefLaxa = t => {
+            const tc = t.replace(/^[\s•●\-\*✔✓►▪▸◆◉\d\.]+/, '').trim();
+            const tn = tc.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            if (tc.length <= 35) return false;
+            if (/^https?:\/\/|^www\.|^ftp:/i.test(tc)) return false;      // URLs
+            if (/^\d+\.\s+[A-ZÁÉÍÓÚ]/.test(tc)) return false;             // "1. Recursos Didácticos"
+            if (/^(?:Materiales|Cuaderno|Hojas|Data\s+show|Laboratorio|Aula|Apuntes|Sitio\s+web|Computador)/i.test(tc)) return false;
+            // Excluir explícitamente líneas de firma y secciones finales
+            if (tn.startsWith('academico responsable')) return false;
+            if (tn.startsWith('fecha de ')) return false;
+            if (tn.includes('webgraf')) return false;
+            if (/^Otros\s+materiales/i.test(tc)) return false;
+            return true;
+        };
+
+        // Condiciones de parada
+        const esFin = t => {
+            // Normalizar para evitar problemas de codificación de tildes
+            const tn = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            return /^(?:VIII|IX|X{1,3})\.\s+/i.test(t)
+                || /^SOBRE\s+INTEGRIDAD/i.test(t)
+                || tn.startsWith('academico responsable')   // firma final del programa
+                || tn.startsWith('fecha de elaboracion')
+                || tn.startsWith('fecha de actualizacion')
+                || tn.startsWith('fecha de modificacion')
+                || tn.includes('webgraf')                   // sección Webgrafía
+                || /Otros\s+materiales\s+de\s+apoyo/i.test(t);
+        };
+
+        parrafos.forEach(p => {
+            if (esTituloBiblio(p)) { enBiblio = true; return; }
+            if (!enBiblio) return;
+            if (esFin(p)) { enBiblio = false; enTipo = false; return; }
+
+            if (esTipoBasica(p)) { tipoActual = 'Básica';         enTipo = true; return; }
+            if (esTipoComp(p))   { tipoActual = 'Complementaria'; enTipo = true; return; }
+
+            // Modo estricto (sin tipo previo): exige APA con año
+            // Modo laxa (con tipo previo): acepta cualquier línea sustancial sin URL
+            const esRef = enTipo ? esRefLaxa(p) : esRefEstricta(p);
+            if (esRef) {
+                const refLimpia = p.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').replace(/\s*\.+\s*\.+/g, '.').trim();
+                ext_datos.push({ archivo: filename, carrera, clave, nombre, tipo: tipoActual, ref: refLimpia, status: validarCalidad(refLimpia) });
+            }
+        });
+
+        ext_updateView();
+    }
+
+    // FUNCIÓN CORE PARA PDF — procesa línea a línea respetando estructura
+    function extraerYAcumular(texto, filename) {
+        texto = texto.replace(/\r/g, '\n').replace(/\t/g, ' ');
+        // Normalizar espacios múltiples (artefacto de texto justificado en TXT)
+        const lineas = texto.split('\n').map(l => l.trim().replace(/\s{2,}/g, ' ')).filter(l => l.length > 0);
+
+        let carrera = '', clave = '', nombre = '';
+
+        // Detectar metadatos en dos modos:
+        // Modo A (PDF/ICI): "Sigla   ICI 1241" en la misma línea
+        // Modo B (TXT): "Sigla" en una línea, "MAT104" en la siguiente
+        for (let i = 0; i < lineas.length && !(clave && nombre); i++) {
+            const l = lineas[i];
+            // Modo A: etiqueta + valor en la misma línea
+            if (!clave) {
+                const m = l.match(/(?:Sigla|Código|Clave)[\s:\t,]+([A-Z]{2,6}\s*\d{3,5})/i);
+                if (m) { clave = m[1].trim(); continue; }
+            }
+            if (!nombre) {
+                const m = l.match(/^Nombre\s+(?:de\s+la\s+)?Asignatura[\s:\t]+(.+)/i)
+                       || l.match(/^Nombre\s+del?\s+Curso[\s:\t]+(.+)/i);
+                if (m) { nombre = m[1].trim().replace(/^"|"$/g, '').substring(0, 100); continue; }
+            }
+            if (!carrera) {
+                const m = l.match(/^Carrera[\s:\t]+(.+)/i);
+                if (m) { carrera = m[1].trim().substring(0, 60); continue; }
+            }
+            // Modo B: etiqueta sola en línea → valor en la siguiente línea
+            if (!clave && /^(?:Sigla|Código|Clave)\s*$/i.test(l) && i + 1 < lineas.length) {
+                const next = lineas[i + 1];
+                if (/^[A-Z]{2,6}\s*\d{3,5}$/.test(next)) { clave = next.trim(); continue; }
+            }
+            if (!nombre && /^Nombre\s+(?:de\s+la\s+)?Asignatura\s*$/i.test(l) && i + 1 < lineas.length) {
+                const next = lineas[i + 1];
+                if (next.length > 2 && next.length < 100 && !/^[A-Z]{2,6}\d/.test(next) && !/^\d+$/.test(next)) {
+                    nombre = next.trim(); continue;
+                }
+            }
         }
-      }
-      res.educacion=ed.slice(0,3).join('\n');
+
+        if (!nombre || nombre.length > 100)
+            nombre = filename.replace(/\.(pdf|docx|txt)$/i, '').replace(/[-_]/g, ' ').trim();
+
+        // Encontrar inicio de bibliografía — FIX: incluye "VII. BIBLIOGRAFÍA Y OTROS RECURSOS..."
+        let idxBiblio = -1;
+        for (let i = 0; i < lineas.length; i++) {
+            if (/^(?:VII\.?\s*)?(?:BIBLIOGRAFÍA|Referencias\s*Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)(?:\s+Y\s+.+)?$/i.test(lineas[i])) {
+                idxBiblio = i; break;
+            }
+        }
+        if (idxBiblio === -1) {
+            for (let i = 0; i < lineas.length; i++) {
+                if (/BIBLIOGRAFÍA|Referencias\s+Bibliográficas?/i.test(lineas[i])) {
+                    idxBiblio = i; break;
+                }
+            }
+        }
+        if (idxBiblio === -1) return;
+
+        // FIX: detectar subencabezados con "Bibliografía Obligatoria:" y "Bibliografía Complementaria:"
+        const esTipoBasica = t => /(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)/i.test(t);
+        const esTipoComp   = t => /(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
+        // FIX: limpiar viñetas (•, ●, ✔, etc.) del inicio de línea
+        const limpiarL = t => t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').trim();
+        // FIX: detectar fin de sección bibliografía
+        const esFin = t => {
+            const tn = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            return /^(?:VIII|IX|X|XI)\.\s+/i.test(t)
+                || /^SOBRE\s+INTEGRIDAD/i.test(t)
+                || tn.startsWith('academico responsable')
+                || tn.startsWith('unidad responsable')      // MAT: "Unidad responsable de la elaboración..."
+                || tn.startsWith('fecha de elaboracion')
+                || tn.startsWith('fecha de actualizacion')
+                || tn.startsWith('fecha de modificacion')
+                || tn.includes('webgraf')
+                || /plataforma\s+aula\s+virtual/i.test(tn) // MAT: "3. Plataforma Aula Virtual que contiene:"
+                || /Otros\s+materiales\s+de\s+apoyo/i.test(t);
+        };
+
+        let tipoActual = 'Básica';
+        let refActual  = '';
+
+        const guardarRef = () => {
+            if (refActual.length > 30) {
+                const limpia = refActual.replace(/\s{2,}/g, ' ').replace(/\s*\.+\s*\.+/g, '.').trim();
+                ext_datos.push({ archivo: filename, carrera, clave, nombre, tipo: tipoActual, ref: limpia, status: validarCalidad(limpia) });
+            }
+            refActual = '';
+        };
+
+        for (let i = idxBiblio + 1; i < lineas.length; i++) {
+            const l = lineas[i];
+            if (esFin(l)) { guardarRef(); break; }
+            if (esTipoBasica(l)) { guardarRef(); tipoActual = 'Básica';         continue; }
+            if (esTipoComp(l))   { guardarRef(); tipoActual = 'Complementaria'; continue; }
+
+            // Detectar inicio de referencia: •, ●  (ICI style) o - guión (MAT style)
+            if (/^[•●\-]/.test(l)) {
+                if (refActual.length > 0) guardarRef();
+                const lc = limpiarL(l);
+                if (lc.length > 5) refActual = lc;
+            } else {
+                // Línea de continuación
+                const lc = l.trim();
+                if (lc.length > 5 && refActual.length > 0) refActual += ' ' + lc;
+            }
+        }
+        guardarRef();
+        ext_updateView();
     }
-    if (wr.ok) { const d=await wr.json(); res.obras_orcid=(d.group||[]).length; }
-  } catch(e){ console.warn('ORCID profile error',id,e); }
-  return res;
-}
 
-// ─── DASHBOARD ────────────────────────────────
-function showDashboard() {
-  document.getElementById('proc').style.display='none';
-  document.getElementById('main').style.display='flex';
-  buildSidebar(); selectInv(0);
-  document.getElementById('eb-info').textContent =
-    `${invs.length} investigadores · ${new Date().toLocaleDateString('es-CL')}`;
-}
+    function validarCalidad(ref) {
+        if (ref.match(/EUR\s*\d+/) || ref.match(/US\$\d+/) || ref.includes("PLIT")) return { level: 'error', msg: "ERROR — texto inválido" };
+        const tieneAnio = /\b(19|20)\d{2}\b|\(s\.?f\.?\)/.test(ref);
+        if (!tieneAnio) return { level: 'warning', msg: "INCOMPLETA — falta año" };
+        if (/^\s*\(?\d{4}\)?/.test(ref) || /^\s*:/.test(ref) || /^\s*-/.test(ref)) return { level: 'warning', msg: "INCOMPLETA — falta autor" };
+        return { level: 'success', msg: "OK" };
+    }
 
-function buildSidebar() {
-  const list=document.getElementById('inv-list'); list.innerHTML='';
-  invs.forEach((inv,i)=>{
-    const el=document.createElement('div');
-    el.className='ii'+(i===sel?' active':'');
-    el.id=`si-${i}`; el.onclick=()=>selectInv(i);
-    el.style.borderLeftColor = i===sel ? inv.color : 'transparent';
-    el.innerHTML=`<div class="flex gap8" style="align-items:center">
-      <div class="ii-av" style="background:${inv.color}22;border:1px solid ${inv.color}44;color:${inv.color}">${inv.initials}</div>
-      <div style="min-width:0">
-        <div class="ii-name" style="color:${i===sel?inv.color:'#7a9bbf'}">${inv.nombre} ${inv.apellido.split(' ')[0]}</div>
-        <div class="ii-sub">${inv.ua}</div>
-      </div>
-    </div>`;
-    list.appendChild(el);
-  });
-  document.getElementById('sb-ft').textContent=`${invs.length} investigadores`;
-}
+    function ext_updateView() {
+        const tbody = document.getElementById('tablaExtractorBody');
+        if(ext_datos.length) tbody.innerHTML = '';
+        else tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Esperando datos...</td></tr>';
 
-function filterSb(q) {
-  invs.forEach((_,i)=>{
-    const el=document.getElementById(`si-${i}`);
-    const v=(invs[i].nombre_completo+invs[i].ua).toLowerCase().includes(q.toLowerCase());
-    if(el) el.style.display=v?'':'none';
-  });
-}
+        // Mostrar agrupado por asignatura en la tabla
+        const grupos = {};
+        ext_datos.forEach((d, i) => {
+            const key = (d.clave || '—') + '||' + (d.nombre || '—');
+            if (!grupos[key]) grupos[key] = { clave: d.clave, nombre: d.nombre, items: [] };
+            grupos[key].items.push({ ...d, idx: i });
+        });
 
-function selectInv(i) {
-  document.querySelectorAll('.ii').forEach(el=>el.classList.remove('active'));
-  const sitem=document.getElementById(`si-${i}`);
-  if(sitem){sitem.classList.add('active');sitem.style.borderLeftColor=invs[i].color;}
-  sel=i;
-  const inv=invs[i];
-  renderPH(inv); renderOV(inv); renderPub(inv); renderCol(inv); renderAN(inv); renderIDs(inv);
-  sw('ov',document.querySelector('.tb'));
-}
+        Object.values(grupos).forEach(grupo => {
+            // Fila separadora de asignatura
+            tbody.innerHTML += `
+                <tr style="background:#e9ecef;">
+                    <td colspan="4">
+                        <strong>${grupo.clave || '—'}</strong> · ${grupo.nombre || '—'}
+                        <span class="badge bg-secondary ms-2">${grupo.items.length} refs</span>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-xs btn-outline-secondary btn-sm py-0 px-1" style="font-size:.75rem;"
+                            onclick="ext_editarAsignatura('${(grupo.clave+'||'+grupo.nombre).replace(/'/g,"\\'")}')">
+                            ✏️ Editar
+                        </button>
+                    </td>
+                </tr>`;
+            // Filas de referencias del grupo
+            grupo.items.forEach(d => {
+                let clase = d.status.level === 'success' ? 'row-ok' : (d.status.level === 'warning' ? 'row-warning' : 'row-error');
+                tbody.innerHTML += `<tr class="${clase}">
+                    <td><small class="text-muted">${d.clave || '—'}</small></td>
+                    <td><small>${d.nombre || '—'}</small></td>
+                    <td><span class="badge bg-secondary">${d.tipo}</span></td>
+                    <td><small>${d.ref}</small></td>
+                    <td><small>${d.status.msg}</small></td>
+                </tr>`;
+            });
+        });
 
-// ─── PROFILE HEADER ──────────────────────────
-function renderPH(inv) {
-  document.getElementById('ph').innerHTML=`
-    <div class="flex gap8" style="align-items:center">
-      <div class="ph-av" style="background:${inv.color}22;border:2px solid ${inv.color}60;color:${inv.color}">${inv.initials}</div>
-      <div style="flex:1">
-        <div class="ph-name">${inv.nombre_completo}</div>
-        <div class="ph-sub">${inv.ua}</div>
-        <div class="flex gap8 mt8" style="flex-wrap:wrap">
-          ${inv.orcid_id?`<span class="badge b-or" title="${inv.orcid_src}">ORCID: ${inv.orcid_id}</span>`:''}
-          ${inv.scopus_id?`<span class="badge b-sc">Scopus: ${inv.scopus_id}</span>`:''}
-          ${inv.research_id?`<span class="badge" style="background:var(--dim);color:var(--muted);border:1px solid var(--border)">RID: ${inv.research_id}</span>`:''}
-        </div>
-      </div>
-    </div>`;
-}
+        // Resumen tarjetas por asignatura
+        const resumenLista = document.getElementById('ext_resumenLista');
+        resumenLista.innerHTML = '';
+        Object.values(grupos).forEach(grupo => {
+            const bas  = grupo.items.filter(d => d.tipo !== 'Complementaria').length;
+            const comp = grupo.items.filter(d => d.tipo === 'Complementaria').length;
+            resumenLista.innerHTML += `
+                <div class="card border-secondary" style="min-width:200px; max-width:260px;">
+                    <div class="card-body py-2 px-3">
+                        <div class="fw-bold small">${grupo.clave || '—'}</div>
+                        <div class="text-muted small text-truncate" title="${grupo.nombre}">${grupo.nombre || '—'}</div>
+                        <div class="mt-1 d-flex gap-2">
+                            <span class="badge bg-primary">${bas} Básica</span>
+                            <span class="badge bg-secondary">${comp} Compl.</span>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        document.getElementById('ext_resumenAsignaturas').style.display = ext_datos.length ? 'block' : 'none';
 
-// ─── OVERVIEW TAB ─────────────────────────────
-function renderOV(inv) {
-  const t=document.getElementById('tc-ov');
+        document.getElementById('badgeArchivos').innerText = ext_filesProcesados.size + " Archivos";
+        document.getElementById('badgeRefs').innerText = ext_datos.length + " Refs";
+        document.getElementById('btnDescargarExt').classList.remove('disabled');
+        document.getElementById('btnEnviarGestor').classList.remove('disabled');
+        document.getElementById('statusLog').innerText = "Procesamiento completo. " + Object.keys(grupos).length + " asignatura(s) detectada(s).";
+    }
 
-  // Gráfico tendencia anual
-  const cby = (inv.oa_counts_by_year||[]).filter(y=>y.year>=2019).sort((a,b)=>a.year-b.year);
-  const tendenciaHtml = cby.length ? (()=>{
-    const maxW = Math.max(...cby.map(y=>y.works_count),1);
-    const bars = cby.map(y=>{
-      const hW  = Math.round((y.works_count/maxW)*80);
-      const hOA = Math.round((y.oa_works_count/maxW)*80);
-      return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
-        <div style="font-size:8px;color:var(--muted);font-weight:600">${y.works_count}</div>
-        <div style="width:100%;height:80px;display:flex;flex-direction:column;justify-content:flex-end">
-          <div style="width:100%;height:${hOA}px;background:#34d399;border-radius:2px 2px 0 0" title="OA: ${y.oa_works_count}"></div>
-          <div style="width:100%;height:${Math.max(0,hW-hOA)}px;background:#3b82f6;opacity:.5" title="Cerrado: ${y.works_count-y.oa_works_count}"></div>
-        </div>
-        <div style="font-size:9px;color:var(--muted)">${String(y.year).slice(2)}</div>
-      </div>`;
-    }).join('');
-    const t5   = cby.slice(-5).reduce((a,y)=>a+y.works_count,0);
-    const oa5  = cby.slice(-5).reduce((a,y)=>a+y.oa_works_count,0);
-    const pct5 = t5 ? Math.round(oa5/t5*100) : 0;
-    return `<div class="sc" style="margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <div class="sc-lbl">PRODUCCIÓN POR AÑO</div>
-        <div style="font-size:9px;color:var(--muted)">
-          5 años: <b style="color:var(--text)">${t5}</b> pubs ·
-          OA: <b style="color:#34d399">${pct5}%</b>
-        </div>
-      </div>
-      <div style="display:flex;gap:3px;align-items:flex-end;height:95px">${bars}</div>
-      <div style="display:flex;gap:8px;margin-top:5px;font-size:9px">
-        <span><span style="display:inline-block;width:8px;height:8px;background:#3b82f6;opacity:.5;margin-right:2px"></span>Cerrado</span>
-        <span><span style="display:inline-block;width:8px;height:8px;background:#34d399;margin-right:2px"></span>OA</span>
-      </div>
-    </div>`;
-  })() : '';
+    function ext_editarAsignatura(key) {
+        const [claveActual, nombreActual] = key.split('||');
+        const nuevaClave  = prompt('Clave de asignatura:', claveActual === '—' ? '' : claveActual);
+        if (nuevaClave === null) return;
+        const nuevoNombre = prompt('Nombre de asignatura:', nombreActual === '—' ? '' : nombreActual);
+        if (nuevoNombre === null) return;
+        // Actualizar todos los registros de ese grupo
+        ext_datos.forEach(d => {
+            if ((d.clave || '—') === claveActual && (d.nombre || '—') === nombreActual) {
+                d.clave  = nuevaClave.trim();
+                d.nombre = nuevoNombre.trim();
+            }
+        });
+        ext_updateView();
+    }
 
-  t.innerHTML=tendenciaHtml+`
-    <div class="sg sg4">
-      ${sc('📈','Índice H',inv.h_index,inv.h_index?'Scopus':'Sin datos',inv.h_index>=15?'var(--green)':inv.h_index>=8?'var(--amber)':'var(--muted)')}
-      ${sc('💬','Citas Totales',inv.citas.toLocaleString(),'Scopus',inv.citas>=500?'var(--blue)':'var(--muted)')}
-      ${sc('📄','Documentos',(inv.pubs_total||inv.documentos),'Scopus+OA','var(--purple)')}
-      ${sc('🆔','Obras ORCID',inv.obras_orcid,inv.orcid_id?'Auto-descubierto':'Sin ORCID','var(--orcid)')}
-    </div>
-    <div class="sg sg4">
-      ${sc('🤝','Coautores',inv.coautores,'red Scopus','var(--coral)')}
-      ${sc('🇨🇱','Proyectos ANID',inv.proyectos_anid.length,inv.proyectos_anid.filter(p=>(p.estado||p.status)==='Activo').length+' activos','var(--amber)')}
-      ${(()=>{
-        const tot = inv.pubs_total || inv.publicaciones.length;
-        const sc_docs = inv.documentos || inv.publicaciones.filter(p=>!p.solo_oa).length;
-        const oa_extra = tot > sc_docs ? tot - sc_docs : 0;
-        const sub = oa_extra
-          ? `${sc_docs} Scopus + ${oa_extra} solo OA`
-          : 'Scopus + OpenAlex';
-        return sc('📋','Publicaciones', tot, sub, 'var(--green)');
-      })()}
-      ${(()=>{const n=inv.n_oa||inv.publicaciones.filter(p=>p.is_oa).length;
-        const tot=inv.publicaciones.length;const pct=tot?Math.round(n/tot*100):0;
-        return sc('🔓','Open Access',n+' ('+pct+'%)','de '+tot+' publicaciones',
-          pct>=50?'var(--green)':pct>0?'var(--amber)':'var(--muted)');})()}
-    </div>
+    function ext_reiniciarTodo() {
+        if(!confirm("¿Borrar todo?")) return;
+        ext_datos=[]; ext_filesProcesados.clear();
+        document.getElementById('tablaExtractorBody').innerHTML='<tr><td colspan="5" class="text-center text-muted">Esperando...</td></tr>';
+        document.getElementById('badgeArchivos').innerText="0"; document.getElementById('badgeRefs').innerText="0";
+        document.getElementById('btnDescargarExt').classList.add('disabled');
+        document.getElementById('btnEnviarGestor').classList.add('disabled');
+    }
 
-    ${inv.publicaciones.length?(()=>{
-      const cnt={gold:0,green:0,hybrid:0,bronze:0,closed:0};
-      inv.publicaciones.forEach(p=>{const s=p.oa_status||'closed';if(s in cnt)cnt[s]++;});
-      const tot=inv.publicaciones.length||1;
-      if(!Object.values(cnt).some(Boolean)) return '';
-      const segs=Object.entries(cnt).filter(([,n])=>n>0)
-        .map(([s,n])=>`<div class="pub-oa-seg" style="width:${Math.round(n/tot*100)}%;background:${OA_COL[s]?.fg||'#888'}" title="${OA_COL[s]?.lbl||s}: ${n}"></div>`).join('');
-      const lbls=Object.entries(cnt).filter(([,n])=>n>0)
-        .map(([s,n])=>`<span style="font-size:10px;color:${OA_COL[s]?.fg||'#888'}"><b>${n}</b> ${OA_COL[s]?.lbl||s}</span>`).join('<span style="color:var(--muted)"> · </span>');
-      return `<div class="sc" style="margin-bottom:12px">
-        <div class="sc-lbl" style="margin-bottom:6px">DISTRIBUCIÓN OPEN ACCESS</div>
-        <div class="pub-oa-bar">${segs}</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">${lbls}</div>
-      </div>`;
-    })():''}
-    ${(inv.top_keywords||[]).length ? `
-    <div class="sc" style="margin-bottom:14px">
-      <div class="sc-lbl" style="margin-bottom:8px">TÓPICOS DE INVESTIGACIÓN
-        <span style="font-size:8px;color:var(--muted);font-weight:400;margin-left:4px">
-          ${inv.oa_topics?.length ? '· OpenAlex' : '· Scopus keywords'}
-        </span>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:5px">
-        ${(inv.top_keywords||[]).map(([kw,n],i)=>`
-          <span style="padding:4px 10px;border-radius:10px;font-size:10px;
-            background:${i===0?'var(--blue)22':'var(--dim)'};
-            border:1px solid ${i===0?'var(--blue)':'var(--border)'};
-            color:${i===0?'var(--blue)':'var(--text)'}">
-            ${kw}
-            <span style="color:var(--muted);font-size:9px;margin-left:3px">${n}</span>
-          </span>`).join('')}
-      </div>
-    </div>` : ''}
-    <div class="sg sg2">
-      <div class="sc">
-        <div class="sc-lbl">EMPLEO ACTUAL (ORCID)</div>
-        <div style="font-size:12px;line-height:1.7">${inv.empleos_actuales||'<span style="color:var(--muted);font-style:italic">No disponible en ORCID</span>'}</div>
-        ${inv.educacion?`<div class="sc-lbl" style="margin-top:10px">FORMACIÓN</div>
-        ${inv.educacion.split('\n').map(e=>`<div style="font-size:11px;color:var(--muted);margin-top:2px">${e}</div>`).join('')}`:''}
-      </div>
-      <div class="sc">
-        <div class="sc-lbl">ÁREAS (SCOPUS)</div>
-        <div style="font-size:12px;line-height:1.7">${inv.areas||`<span style="color:var(--muted);font-style:italic">${inv.scopus_id ? 'Sin áreas temáticas en Scopus para este perfil' : 'Sin Scopus ID — ejecuta Vigilancia3.py y carga el JSON'}</span>`}</div>
-        ${!inv.h_index?`<div class="alert al-w" style="margin-top:10px">⚠ Para ver h-index y citas, carga el <strong>datos_dashboard.json</strong> desde la barra inferior.</div>`:''}
-      </div>
-    </div>`;
-}
-const sc=(icon,lbl,val,sub,col)=>
-  `<div class="sc"><div class="sc-lbl">${icon} ${lbl}</div><div class="sc-val" style="color:${col}">${val}</div>${sub?`<div class="sc-sub">${sub}</div>`:''}</div>`;
+    function ext_enviarAlGestor() {
+        if (!ext_datos.length) return;
+        let agregados = 0;
+        ext_datos.forEach(d => {
+            // Evitar duplicados por referencia
+            const existe = gestor_refs.some(r => r.Referencia === d.ref);
+            if (!existe) {
+                gestor_refs.push({
+                    Carrera:      d.carrera  || '',
+                    Clave:        d.clave    || '',
+                    Asignatura:   d.nombre   || '',
+                    Tipo:         d.tipo,
+                    Referencia:   d.ref,
+                    ISBN:         '',
+                    Observaciones: d.status.level !== 'success' ? d.status.msg : ''
+                });
+                agregados++;
+            }
+        });
+        gestor_renderTabla();
+        alert(`✅ ${agregados} referencia(s) enviadas al Gestor Principal.${agregados < ext_datos.length ? `\n(${ext_datos.length - agregados} ya existían y no se duplicaron)` : ''}`);
+        document.getElementById('gestor-tab').click();
+    }
 
-// ─── PUBLICATIONS TAB ────────────────────────
-function renderPub(inv) {
-  const t=document.getElementById('tc-pub');
-  if(!inv.publicaciones.length){
-    t.innerHTML=`<div class="alert al-w">⚠️ Sin publicaciones. Carga el JSON generado por <code>Vigilancia3.py</code>.</div>`;
-    return;
-  }
-  const nOA=inv.publicaciones.filter(p=>p.is_oa).length;
-  const nSoloOA=inv.publicaciones.filter(p=>p.solo_oa).length;
-  const nQ1=inv.publicaciones.filter(p=>p.q==='Q1').length;
-  const oaBadge=p=>{
-    const s=p.oa_status||'closed'; const o=OA_COL[s]||OA_COL.closed;
-    const inner=p.oa_url&&s!=='closed'
-      ?`<a href="${p.oa_url}" target="_blank" title="${o.tip}">${o.lbl}</a>`
-      :`<span title="${o.tip}">${o.lbl}</span>`;
-    return `<span class="oa-badge" style="background:${o.bg};color:${o.fg}">${inner}</span>`;
-  };
-  t.innerHTML=`
-    <div style="display:flex;gap:10px;margin-bottom:11px;flex-wrap:wrap;align-items:center">
-      <span style="font-size:11px;color:var(--muted)">${inv.publicaciones.length} publicaciones · Scopus + OpenAlex</span>
-      ${nOA?`<span style="font-size:10px;color:#34d399;font-weight:600">🔓 ${nOA} en OA</span>`:''}
-      ${nQ1?`<span style="font-size:10px;color:#22d3ee;font-weight:600">Q1: ${nQ1}</span>`:''}
-      ${nSoloOA?`<span class="solo-oa">✦ ${nSoloOA} solo OpenAlex</span>`:''}
-    </div>`+
-    inv.publicaciones.map(p=>`
-    <div class="pub-row" style="${p.solo_oa?'border-left:2px solid #a78bfa;padding-left:8px':''}">
-      ${p.q?`<div class="qb" style="background:${QCOL[p.q]||'#555'}22;border:1px solid ${QCOL[p.q]||'#555'}44;color:${QCOL[p.q]||'#888'}">${p.q}</div>`
-           :`<div class="qb" style="background:var(--dim);color:var(--muted)">—</div>`}
-      <div style="flex:1;min-width:0">
-        <div class="pub-t">${p.titulo}</div>
-        <div class="pub-m" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:3px">
-          ${p.revista?`<span>${p.revista}</span>`:''}
-          ${p.año?`<span>· ${p.año}</span>`:''}
-          ${p.sjr?`<span class="sjr-val">SJR ${parseFloat(p.sjr).toFixed(2)}</span>`:''}
-          ${oaBadge(p)}
-          ${p.citas?`<span style="color:${inv.color};font-weight:600;font-size:10px">↗ ${p.citas} citas</span>`:''}
-          ${p.doi?`<a href="https://doi.org/${p.doi}" target="_blank" class="a-link">DOI</a>`:''}
-          ${p.enlace&&!p.solo_oa?`<a href="${p.enlace}" target="_blank" class="a-link">Scopus 🔗</a>`:''}
-          ${p.solo_oa?`<span class="solo-oa">OpenAlex</span>`:''}
-        </div>
-      </div>
-    </div>`).join('');
-}
+    function ext_exportarExcel() {
+        if(!ext_datos.length) return;
+        const wb = XLSX.utils.book_new();
+        const ws = {};
 
-// ─── COLLABORATIONS TAB ──────────────────────
-const TIPO_CO = {
-  'PUCV'         : {col:'#22d3ee', bg:'#22d3ee18', lbl:'PUCV'},
-  'Nacional'     : {col:'#f59e0b', bg:'#f59e0b18', lbl:'Nacional'},
-  'Internacional': {col:'#34d399', bg:'#34d39918', lbl:'Intl.'},
-  'Sin datos'    : {col:'#64748b', bg:'#64748b18', lbl:'S/D'},
+        // Detectar carrera
+        const carrera = ext_datos.find(d => d.carrera)?.carrera || '';
+
+        // Encabezados formato oficial
+        ws['A1'] = { v: 'Carrera o Programa: ' + carrera, t: 's' };
+        ws['A2'] = { v: 'Clave Asignatura',              t: 's' };
+        ws['B2'] = { v: 'Nombre Asignatura',             t: 's' };
+        ws['C2'] = { v: 'Tipo Bibliografía',             t: 's' };
+        ws['D2'] = { v: 'Referencias',                   t: 's' };
+        ws['E2'] = { v: 'Disponibilidad en Bibliotecas', t: 's' };
+        ws['J2'] = { v: 'Observaciones',                 t: 's' };
+        ws['K2'] = { v: 'Proveedor',                     t: 's' };
+        ws['L2'] = { v: 'Valor pesos',                   t: 's' };
+        ws['E3'] = { v: 'LIBROS N° de ejemplares (cantidad - año)',            t: 's' };
+        ws['I3'] = { v: 'Artículo Científico Disponible en (papel - on line)', t: 's' };
+        ws['E4'] = { v: 'Btca UA',                t: 's' };
+        ws['F4'] = { v: 'Otras Btcas',            t: 's' };
+        ws['G4'] = { v: 'Total',                  t: 's' };
+        ws['H4'] = { v: 'Disponible on line URL', t: 's' };
+
+        let fila = 5;
+
+        // Agrupar por asignatura
+        const grupos = {};
+        ext_datos.forEach(d => {
+            const key = (d.clave || '') + '||' + (d.nombre || '');
+            if (!grupos[key]) grupos[key] = { clave: d.clave || '', asignatura: d.nombre || '', basica: [], complementaria: [] };
+            if (d.tipo === 'Complementaria') grupos[key].complementaria.push(d);
+            else grupos[key].basica.push(d);
+        });
+
+        Object.values(grupos).forEach(grupo => {
+            if (grupo.basica.length) {
+                ws[`C${fila}`] = { v: 'básica', t: 's' };
+                fila++;
+                grupo.basica.forEach(d => {
+                    ws[`A${fila}`] = { v: grupo.clave,      t: 's' };
+                    ws[`B${fila}`] = { v: grupo.asignatura, t: 's' };
+                    ws[`C${fila}`] = { v: '',               t: 's' };
+                    ws[`D${fila}`] = { v: d.ref,            t: 's' };
+                    ws[`E${fila}`] = { v: '', t: 's' }; ws[`F${fila}`] = { v: '', t: 's' }; ws[`G${fila}`] = { v: '', t: 's' }; ws[`H${fila}`] = { v: '', t: 's' };
+                    if (d.status.level !== 'success') ws[`J${fila}`] = { v: d.status.msg, t: 's' };
+                    fila++;
+                });
+                fila++;
+            }
+            if (grupo.complementaria.length) {
+                ws[`C${fila}`] = { v: 'complementaria', t: 's' };
+                fila++;
+                grupo.complementaria.forEach(d => {
+                    ws[`A${fila}`] = { v: grupo.clave,      t: 's' };
+                    ws[`B${fila}`] = { v: grupo.asignatura, t: 's' };
+                    ws[`C${fila}`] = { v: '',               t: 's' };
+                    ws[`D${fila}`] = { v: d.ref,            t: 's' };
+                    ws[`E${fila}`] = { v: '', t: 's' }; ws[`F${fila}`] = { v: '', t: 's' }; ws[`G${fila}`] = { v: '', t: 's' }; ws[`H${fila}`] = { v: '', t: 's' };
+                    if (d.status.level !== 'success') ws[`J${fila}`] = { v: d.status.msg, t: 's' };
+                    fila++;
+                });
+                fila++;
+            }
+        });
+
+        ws['!cols'] = [{wch:16},{wch:30},{wch:16},{wch:70},{wch:12},{wch:12},{wch:10},{wch:25},{wch:30},{wch:25},{wch:18},{wch:14}];
+        ws['!merges'] = [
+            { s:{r:0,c:0}, e:{r:0,c:11} },
+            { s:{r:1,c:4}, e:{r:1,c:8} },
+            { s:{r:2,c:4}, e:{r:2,c:7} },
+        ];
+        ws['!ref'] = `A1:L${fila}`;
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Bibliografías');
+        XLSX.writeFile(wb, `Extractor_${carrera || 'Bibliografía'}.xlsx`);
+    }
+</script>
+
+<script>
+    let imp_referencias = [];
+    const dropZoneImport = document.getElementById('dropZoneImport');
+    const fileInputImport = document.getElementById('fileInputImport');
+
+    dropZoneImport.addEventListener('dragover', (e) => { e.preventDefault(); dropZoneImport.style.backgroundColor='#e0d8ff'; });
+    dropZoneImport.addEventListener('dragleave', (e) => { e.preventDefault(); dropZoneImport.style.backgroundColor='#f3f0ff'; });
+    dropZoneImport.addEventListener('drop', (e) => { e.preventDefault(); dropZoneImport.style.backgroundColor='#f3f0ff'; imp_procesarArchivo(e.dataTransfer.files[0]); });
+    fileInputImport.addEventListener('change', (e) => imp_procesarArchivo(e.target.files[0]));
+
+    function imp_procesarArchivo(file) {
+        if(!file) return;
+        const reader = new FileReader();
+        const ext = file.name.split('.').pop().toLowerCase();
+        reader.onload = (e) => {
+            const content = e.target.result;
+            if(ext === 'ris') imp_referencias = imp_parseRIS(content);
+            else if(ext === 'bib') imp_referencias = imp_parseBibTeX(content);
+            else { alert("Formato no soportado. Use .RIS o .BIB"); return; }
+            imp_renderTabla();
+        };
+        reader.readAsText(file);
+    }
+
+    function imp_parseRIS(content) {
+        const entries = content.split(/ER\s{1,2}-/);
+        return entries.map(entry => {
+            if(!entry.trim()) return null;
+            const getField = (tag) => {
+                const match = entry.match(new RegExp(`^${tag}\\s{1,2}-\\s+(.*)$`, "m"));
+                return match ? match[1].trim() : null;
+            };
+            const authors = [];
+            const auRegex = /^AU\s{1,2}-\s+(.*)$/gm;
+            let m; while((m = auRegex.exec(entry)) !== null) authors.push(m[1]);
+            return { titulo: getField('TI') || getField('T1') || "Sin título", autores: authors, anio: (getField('PY') || getField('Y1') || "s.f.").substring(0,4), fuente: getField('PB') || getField('JA') || "" };
+        }).filter(r => r !== null);
+    }
+
+    function imp_parseBibTeX(content) {
+        const rawEntries = content.split('@');
+        return rawEntries.map(entry => {
+            if (!entry.trim() || entry.trim().startsWith('comment')) return null;
+            const extract = (key) => { const match = entry.match(new RegExp(`${key}\\s*=\\s*[{"'](.*?)["'}]`, "i")); return match ? match[1] : null; };
+            const autoresStr = extract('author');
+            return { titulo: extract('title') || "Sin título", autores: autoresStr ? autoresStr.split(' and ').map(a => a.trim()) : [], anio: extract('year') || "s.f.", fuente: extract('journal') || extract('publisher') || "" };
+        }).filter(r => r !== null);
+    }
+
+    function imp_generarAPA(ref) {
+        const autoresFmt = ref.autores.map(a => {
+            if(a.includes(',')) { const p = a.split(','); return `${p[0]}, ${p[1].trim().charAt(0)}.`; }
+            return a;
+        }).join(' & ');
+        return `${autoresFmt} (${ref.anio}). <i>${ref.titulo}</i>. ${ref.fuente}.`;
+    }
+
+    function imp_renderTabla() {
+        const tbody = document.getElementById('tablaImportadorBody');
+        const resultsDiv = document.getElementById('importResults');
+        tbody.innerHTML = '';
+
+        if (imp_referencias.length > 0) {
+            resultsDiv.style.display = 'block';
+            document.getElementById('imp_badge').textContent = imp_referencias.length;
+            imp_referencias.forEach((ref, idx) => {
+                const cita = imp_generarAPA(ref);
+                const citaClean = cita.replace(/<i>|<\/i>/g, '');
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="text-center">
+                            <input type="checkbox" id="imp_chk_${idx}" checked style="width:16px;height:16px;cursor:pointer;">
+                        </td>
+                        <td><small>${cita}</small></td>
+                        <td>
+                            <select class="form-select form-select-sm" id="imp_tipo_${idx}" style="min-width:130px;">
+                                <option value="Básica">Básica</option>
+                                <option value="Complementaria">Complementaria</option>
+                            </select>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-secondary py-0" onclick="imp_copiar('${citaClean.replace(/'/g, "\\'")}')">📋</button>
+                        </td>
+                    </tr>`;
+            });
+        }
+    }
+
+    function imp_seleccionarTodas() {
+        imp_referencias.forEach((_, idx) => {
+            const chk = document.getElementById(`imp_chk_${idx}`);
+            if (chk) chk.checked = true;
+        });
+    }
+
+    function imp_deseleccionarTodas() {
+        imp_referencias.forEach((_, idx) => {
+            const chk = document.getElementById(`imp_chk_${idx}`);
+            if (chk) chk.checked = false;
+        });
+    }
+
+    function imp_aplicarTipoGlobal(tipo) {
+        imp_referencias.forEach((_, idx) => {
+            const el = document.getElementById(`imp_tipo_${idx}`);
+            if (el) el.value = tipo;
+        });
+    }
+
+    function imp_copiar(texto) { navigator.clipboard.writeText(texto); alert("¡Copiado!"); }
+
+    function imp_copiarTodas() {
+        const todas = imp_referencias.map(r => imp_generarAPA(r).replace(/<i>|<\/i>/g, '')).join('\n\n');
+        navigator.clipboard.writeText(todas);
+        alert("¡Copiado!");
+    }
+
+    function imp_enviarAlGestor() {
+        if (!imp_referencias.length) return alert('No hay referencias para enviar.');
+        const carrera    = document.getElementById('imp_carrera').value.trim();
+        const clave      = document.getElementById('imp_clave').value.trim();
+        const asignatura = document.getElementById('imp_asignatura').value.trim();
+
+        // Solo las que tienen checkbox marcado
+        let agregados = 0;
+        let seleccionadas = 0;
+        imp_referencias.forEach((ref, idx) => {
+            const chk = document.getElementById(`imp_chk_${idx}`);
+            if (!chk || !chk.checked) return;
+            seleccionadas++;
+            const cita   = imp_generarAPA(ref);
+            const tipoEl = document.getElementById(`imp_tipo_${idx}`);
+            const tipo   = tipoEl ? tipoEl.value : 'Básica';
+            const existe = gestor_refs.some(r => r.Referencia === cita);
+            if (!existe) {
+                gestor_refs.push({ Carrera: carrera, Clave: clave, Asignatura: asignatura, Tipo: tipo, Referencia: cita, ISBN: '' });
+                agregados++;
+            }
+        });
+
+        if (!seleccionadas) return alert('No hay referencias seleccionadas. Marca al menos una.');
+        gestor_renderTabla();
+        alert(`✅ ${agregados} referencia(s) enviadas al Gestor.\n\nAhora cambia la asignatura y selecciona el siguiente grupo.`);
+        document.getElementById('gestor-tab').click();
+    }
+</script>
+
+<script>
+// ============================================================
+// PANEL DE DISPONIBILIDAD PUCV
+// ============================================================
+let disp_items = [];
+const OPAC_BASE = 'https://catalogo.pucv.cl/cgi-bin/koha/opac-search.pl?q=';
+
+const DISP_ESTADOS = {
+    'sin':        { label: '⬜ Sin verificar',       cls: '' },
+    'disponible': { label: '✅ Disponible',           cls: 'table-success' },
+    'prestado':   { label: '🟡 Prestado / Revisar',  cls: 'table-warning' },
+    'noesta':     { label: '🔴 No está en catálogo', cls: 'table-danger' },
 };
-const PAIS_FLAG = {CL:'🇨🇱',US:'🇺🇸',ES:'🇪🇸',BR:'🇧🇷',DE:'🇩🇪',FR:'🇫🇷',
-  GB:'🇬🇧',AU:'🇦🇺',MX:'🇲🇽',AR:'🇦🇷',CO:'🇨🇴',PE:'🇵🇪',PT:'🇵🇹',IT:'🇮🇹',
-  JP:'🇯🇵',CA:'🇨🇦',NL:'🇳🇱',SE:'🇸🇪',NZ:'🇳🇿',NO:'🇳🇴',FI:'🇫🇮',DK:'🇩🇰'};
 
-let coFiltro = 'todos';
 
-function renderCol(inv) {
-  const t=document.getElementById('tc-col');
-  const co=inv.coautores_list||[];
-  if(!co.length){
-    t.innerHTML=`<div class="alert al-w">⚠️ Sin datos de colaboración. Ejecuta <code>Vigilancia3.py</code> y carga el <code>datos_dashboard.json</code>.</div>`;
-    return;
-  }
-
-  // Conteos por tipo
-  const tipos = {PUCV:0, Nacional:0, Internacional:0, 'Sin datos':0};
-  co.forEach(c=>{tipos[c.tipo||'Sin datos']=(tipos[c.tipo||'Sin datos']||0)+1});
-  const nIntl  = tipos['Internacional'];
-  const nNac   = tipos['Nacional'];
-  const nPUCV  = tipos['PUCV'];
-  const nSD    = tipos['Sin datos'];
-  const totalPapers = co.reduce((a,c)=>a+(c.n||0),0);
-
-  // Grafo SVG
-  const cx=220,cy=130,r=90,nNodes=Math.min(co.length,12);
-  const coGrafo=co.slice(0,nNodes);
-  const TIPO_NODE_COL={'PUCV':'#22d3ee','Nacional':'#f59e0b',
-                        'Internacional':'#34d399','Sin datos':'#64748b'};
-  const nodesGrafo=coGrafo.map((c,i)=>{
-    const a=(i/Math.max(nNodes,1))*2*Math.PI-Math.PI/2;
-    return {...c,x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)};
-  });
-
-  function renderLista(filtro) {
-    const lista = filtro==='todos' ? co : co.filter(c=>(c.tipo||'Sin datos')===filtro);
-    return lista.map(c=>{
-      const tipo=c.tipo||'Sin datos';
-      const tc=TIPO_CO[tipo]||TIPO_CO['Sin datos'];
-      const ini=(c.nombre||'??').split(' ').map(w=>w[0]||'').join('').slice(0,2);
-      const flag=PAIS_FLAG[c.pais||'']||'';
-      const scopusLink=c.scopus_id
-        ?`<a href="https://www.scopus.com/authid/detail.uri?authorId=${c.scopus_id}"
-            target="_blank" class="a-link" style="font-size:9px">Scopus ↗</a>` : '';
-      return `<div class="co-row">
-        <div class="co-av" style="background:${tc.bg};color:${tc.col}">${ini}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:600">${c.nombre||''}</div>
-          <div class="co-inst">${c.afil||'<i style="color:var(--muted)">Sin afiliación registrada</i>'}
-            ${flag?`<span style="margin-left:4px">${flag}</span>`:''}</div>
-          <div style="display:flex;gap:6px;margin-top:3px;align-items:center">
-            <span class="co-tipo" style="background:${tc.bg};color:${tc.col}">${tc.lbl}</span>
-            ${c.pais&&c.pais!==''?`<span class="co-pais">${c.pais}</span>`:''}
-            ${scopusLink}
-          </div>
-        </div>
-        <div class="co-n" style="color:${inv.color}">${c.n||0}<span style="font-size:9px;font-weight:400;color:var(--muted)"> papers</span></div>
-      </div>`;
-    }).join('');
-  }
-
-  t.innerHTML=`
-    <div class="sg sg4" style="margin-bottom:12px">
-      ${sc('🤝','Coautores únicos',co.length,'en red Scopus','var(--blue)')}
-      ${sc('📄','Papers analizados',totalPapers,'co-autoría','var(--purple)')}
-      ${sc('🌐','Internacionales',nIntl,nIntl?'de '+co.length+' coautores':'sin datos','var(--green)')}
-      ${sc('🇨🇱','Nacionales',nNac,nNac?'otras inst. Chile':'','var(--amber)')}
-    </div>
-
-    <div class="sc" style="margin-bottom:14px">
-      <div class="sc-lbl" style="margin-bottom:8px">GRAFO DE CO-AUTORÍA</div>
-      <svg viewBox="0 0 440 260" style="width:100%" class="co-grafo-svg">
-        ${nodesGrafo.map(nd=>{
-          const nc=TIPO_NODE_COL[nd.tipo||'Sin datos']||'#64748b';
-          return `<line x1="${cx}" y1="${cy}" x2="${nd.x}" y2="${nd.y}"
-            stroke="${nc}" stroke-width="${Math.min(2,(nd.n||1)*0.4+0.5)}"
-            stroke-opacity="0.5"/>`;
-        }).join('')}
-        <circle cx="${cx}" cy="${cy}" r="24" fill="${inv.color}30"
-          stroke="${inv.color}" stroke-width="2"/>
-        <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
-          font-size="11" font-weight="700" fill="${inv.color}">${inv.initials}</text>
-        ${nodesGrafo.map(nd=>{
-          const nc=TIPO_NODE_COL[nd.tipo||'Sin datos']||'#64748b';
-          const r2=Math.min(20,Math.max(13,(nd.n||1)*1.5+11));
-          const apellido=(nd.nombre||'').split(',')[0].split(' ').slice(-1)[0]||'?';
-          return `<circle cx="${nd.x}" cy="${nd.y}" r="${r2}"
-            fill="#0f1e30" stroke="${nc}" stroke-width="1.2"/>
-            <text x="${nd.x}" y="${nd.y-2}" text-anchor="middle"
-              font-size="6.5" fill="${nc}" font-weight="600">${apellido.slice(0,8)}</text>
-            <text x="${nd.x}" y="${nd.y+7}" text-anchor="middle"
-              font-size="5.5" fill="#4d6f94">${(nd.pais&&PAIS_FLAG[nd.pais])||nd.tipo?.slice(0,5)||''}</text>`;
-        }).join('')}
-      </svg>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px">
-        ${Object.entries(TIPO_CO).map(([k,v])=>
-          `<span style="font-size:9px;display:flex;align-items:center;gap:4px">
-            <span style="width:8px;height:8px;border-radius:50%;background:${v.col};display:inline-block"></span>
-            <span style="color:var(--muted)">${v.lbl}: ${tipos[k]||0}</span>
-          </span>`).join('')}
-      </div>
-    </div>
-
-    <div class="tipo-tab" id="co-filtro-${inv.scopus_id||'x'}">
-      ${[['todos','Todos',co.length],['Internacional','🌐 Internacional',nIntl],
-         ['Nacional','🇨🇱 Nacional',nNac],['PUCV','PUCV',nPUCV],
-         ['Sin datos','S/D',nSD]].map(([k,lbl,cnt])=>
-        `<span class="tipo-pill ${k==='todos'?'active':''}"
-          style="color:${k==='todos'?'var(--blue)':TIPO_CO[k]?.col||'var(--muted)'};
-          border-color:${k==='todos'?'var(--blue)':'transparent'};
-          background:${k==='todos'?'var(--dim)':'transparent'}"
-          onclick="filtrarCo('${inv.scopus_id||'x'}',this,'${k}',invs[${invs.indexOf(inv)}])"
-          >${lbl} <b>${cnt}</b></span>`).join('')}
-    </div>
-    <div id="co-lista-${inv.scopus_id||'x'}">${renderLista('todos')}</div>`;
-
-  // Guardar función de render en el inv para filtros
-  inv._renderCoLista = renderLista;
+function disp_agregarManual() {
+    const titulo = document.getElementById('disp_titulo').value.trim();
+    const autor  = document.getElementById('disp_autor').value.trim();
+    const anio   = document.getElementById('disp_anio').value.trim();
+    if (!titulo) return alert('El título es obligatorio.');
+    disp_items.push({ titulo, autor, anio, estado: 'sin' });
+    document.getElementById('disp_titulo').value = '';
+    document.getElementById('disp_autor').value  = '';
+    document.getElementById('disp_anio').value   = '';
+    disp_renderTabla();
 }
 
-function filtrarCo(sid, el, filtro, inv) {
-  document.querySelectorAll(`#co-filtro-${sid} .tipo-pill`).forEach(p=>{
-    p.classList.remove('active');
-    p.style.background='transparent';
-    p.style.borderColor='transparent';
-  });
-  el.classList.add('active');
-  el.style.background='var(--dim)';
-  el.style.borderColor=el.style.color;
-  document.getElementById(`co-lista-${sid}`).innerHTML=inv._renderCoLista(filtro);
-}
+function disp_cargarDesdeGestor() {
+    if (!gestor_refs.length) return alert('El Gestor Principal no tiene referencias cargadas aún.');
+    let agregados = 0;
+    gestor_refs.forEach(r => {
+        const ref = r.Referencia || '';
+        const refLimpia = ref.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 
-// ─── ANID TAB ────────────────────────────────
-function renderAN(inv) {
-  const t=document.getElementById('tc-an');
-  const ps=inv.proyectos_anid||[];
-  if(!ps.length){
-    t.innerHTML=`<div class="alert al-w">⚠️ Sin proyectos ANID. Carga el <code>datos_dashboard.json</code> desde la barra inferior — el botón <strong>📂 Cargar JSON</strong>.</div>`;
-    return;
-  }
-  const tot=ps.reduce((a,p)=>a+(parseInt(p.monto)||0),0);
-  const act=ps.filter(p=>(p.estado||p.status)==='Activo');
-  t.innerHTML=`
-    <div class="sg sg3" style="margin-bottom:14px">
-      ${sc('🇨🇱','Total',ps.length,'','var(--amber)')}
-      ${sc('✅','Activos',act.length,'','var(--green)')}
-      ${sc('💰','Financiamiento',tot>=1e6?'$'+(tot/1e6).toFixed(0)+'M':'$'+tot.toLocaleString(),'acumulado','var(--green)')}
-    </div>`+
-    ps.map(p=>{
-      const tipo=p.tipo||p.tipo_concurso||'';
-      const tc=TIPO_COL[tipo]||'#64748b';
-      const est=(p.estado||p.status||'').toLowerCase();
-      const fuente = p.fuente==='orcid'
-        ? `<span style="font-size:8px;padding:1px 5px;border-radius:3px;
-            background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa44;
-            font-weight:600">ORCID</span>`
-        : `<span style="font-size:8px;padding:1px 5px;border-radius:3px;
-            background:#22d3ee22;color:#22d3ee;border:1px solid #22d3ee44;
-            font-weight:600">ANID</span>`;
-      return `<div class="ac">
-        <div class="ac-bgs">
-          <span class="typ" style="background:${tc}22;color:${tc};border:1px solid ${tc}44">${tipo}</span>
-          <span class="typ ${est==='activo'?'s-act':'s-fin'}">${p.estado||p.status||''}</span>
-          ${fuente}
-        </div>
-        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">${p.codigo||p.code||''}</div>
-        <div class="ac-t">${p.titulo||p.title||''}</div>
-        <div class="ac-m">
-          <span>Inicio: ${p.año_inicio||p.year||'—'}</span>
-          ${p.año_fin?`<span>Fin: ${p.año_fin}</span>`:''}
-          ${p.monto?`<span class="am-g">$${parseInt(p.monto).toLocaleString()}</span>`:''}
-          ${p.org&&p.fuente==='orcid'?`<span style="color:var(--muted)">${p.org}</span>`:''}
-        </div>
-      </div>`;
-    }).join('');
-}
+        // Extraer autor: antes del primer "("
+        const matchAutor = refLimpia.match(/^\s*([^(]+)\s*\(/);
+        const autor = matchAutor ? matchAutor[1].trim() : '';
 
-// ─── IDs TAB ─────────────────────────────────
-function renderIDs(inv) {
-  const t=document.getElementById('tc-ids');
-  const row=(src,label,val,how,extra='')=>`
-    <div class="id-row">
-      <span class="id-src" style="color:${src==='orcid'?'var(--orcid)':src==='scopus'?'var(--scopus)':'var(--anid)'}">${label}</span>
-      <span class="id-val">${val||'<span style="color:var(--muted)">No disponible</span>'}</span>
-      <span class="id-how ${how==='auto'?'h-auto':how==='json'?'h-json':'h-none'}">${how==='auto'?'🔍 auto':how==='json'?'📂 json':how==='planilla'?'📋 planilla':'—'}</span>
-      <span class="id-act">${extra}</span>
-    </div>`;
-  t.innerHTML=`
-    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6">
-      Identificadores vinculados a <strong>${inv.nombre_completo}</strong>.<br>
-      <span style="color:var(--green)">🔍 auto</span> = descubierto automáticamente por ORCID · 
-      <span style="color:var(--amber)">📂 json</span> = cargado desde datos_dashboard.json · 
-      <span style="color:var(--muted)">📋 planilla</span> = ingresado manualmente
-    </div>
-    ${row('orcid','ORCID iD',inv.orcid_id,inv.orcid_src||'—',
-      inv.orcid_id?`<a class="a-link" href="https://orcid.org/${inv.orcid_id}" target="_blank">Ver perfil ↗</a>`:
-      `<a class="a-link" href="https://orcid.org/orcid-search/search?searchQuery=${encodeURIComponent(inv.nombre_completo)}" target="_blank">Buscar en ORCID ↗</a>`)}
-    ${row('scopus','Scopus ID',inv.scopus_id,inv.scopus_src||'—',
-      inv.scopus_id?`<a class="a-link" href="https://www.scopus.com/authid/detail.uri?authorId=${inv.scopus_id}" target="_blank">Ver en Scopus ↗</a>`:
-      `<a class="a-link" href="https://www.scopus.com/search/form.uri?display=authorLookup#author" target="_blank">Buscar en Scopus ↗</a>`)}
-    ${row('scopus','Research ID',inv.research_id,inv.research_id?'planilla':'—','')}
-    <div style="margin-top:16px;font-size:11px;color:var(--muted)">
-      Unidad: <strong>${inv.ua}</strong>
-    </div>
-    ${row('orcid','OpenAlex ID',inv.openalex_id||'',inv.openalex_id?'json':'—',
-      inv.openalex_id?`<a class="a-link" href="https://openalex.org/authors/${inv.openalex_id}" target="_blank">Ver en OpenAlex ↗</a>`
-        :`<a class="a-link" href="https://openalex.org/authors?search=${encodeURIComponent(inv.nombre_completo)}" target="_blank">Buscar en OpenAlex ↗</a>`)}
-    ${!inv.scopus_id?`<div class="alert al-b" style="margin-top:14px">
-      ℹ️ Para obtener el Scopus Author ID ejecuta <code>python Vigilancia3.py</code>.</div>`:''}`;
-}
+        // Extraer año
+        const matchAnio = refLimpia.match(/\((\d{4})\)/);
+        const anio = matchAnio ? matchAnio[1] : '';
 
-// ─── GLOBAL VIEW ─────────────────────────────
-function renderGL() {
-  const t=document.getElementById('tc-gl');
-  const withORCID  =invs.filter(i=>i.orcid_id).length;
-  const withScopus =invs.filter(i=>i.scopus_id).length;
-  const withANID   =invs.filter(i=>i.proyectos_anid.length>0).length;
-  const withOAlex  =invs.filter(i=>i.openalex_id).length;
-  const totalOA    =invs.reduce((a,i)=>a+(i.n_oa||i.publicaciones.filter(p=>p.is_oa).length),0);
-  const totalPubs  =invs.reduce((a,i)=>a+i.publicaciones.length,0);
-  const pctOA      =totalPubs?Math.round(totalOA/totalPubs*100):0;
-  t.innerHTML=`
-    <div class="sg sg3" style="margin-bottom:10px">
-      ${sc('🆔','Con ORCID',withORCID,Math.round(withORCID/invs.length*100)+'% del total','var(--orcid)')}
-      ${sc('📊','Con Scopus',withScopus,withScopus?'métricas disponibles':'Carga JSON','var(--scopus)')}
-      ${sc('🇨🇱','Con ANID',withANID,withANID?'proyectos registrados':'Carga JSON','var(--anid)')}
-    </div>
-    <div class="sg sg2" style="margin-bottom:14px">
-      ${sc('🔓','Open Access total',totalOA+' ('+pctOA+'%)','de '+totalPubs+' publicaciones',pctOA>=50?'var(--green)':pctOA>0?'var(--amber)':'var(--muted)')}
-      ${sc('🔭','Con OpenAlex',withOAlex,Math.round(withOAlex/invs.length*100)+'% con perfil OA','var(--purple)')}
-    </div>
-    <div style="overflow-x:auto">
-    <table class="gt">
-      <thead><tr>
-        <th>Investigador</th><th>UA</th>
-        <th style="text-align:right">H</th>
-        <th style="text-align:right">Citas</th>
-        <th style="text-align:right">Docs</th>
-        <th style="text-align:right">Q1</th>
-        <th style="text-align:right">OA%</th>
-        <th style="text-align:right">ANID</th>
-      </tr></thead>
-      <tbody>${invs.map((inv,i)=>`
-        <tr onclick="selectInv(${i});sw('ov',document.querySelector('.tb'))">
-          <td><div class="flex gap8" style="align-items:center">
-            <div style="width:22px;height:22px;border-radius:50%;background:${inv.color}22;border:1px solid ${inv.color}44;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:${inv.color};flex-shrink:0">${inv.initials}</div>
-            <strong>${inv.nombre_completo}</strong>
-          </div></td>
-          <td style="font-size:11px;color:var(--muted)">${inv.ua}</td>
-          <td style="text-align:right"><span class="${inv.h_index>=15?'h-hi':inv.h_index>=8?'h-md':''}">${inv.h_index||'—'}</span></td>
-          <td style="text-align:right"><span class="${inv.citas>=500?'c-hi':''}">${inv.citas?inv.citas.toLocaleString():'—'}</span></td>
-          <td style="text-align:right">${inv.pubs_total||inv.documentos||'—'}</td>
-          <td style="text-align:right;color:#22d3ee;font-weight:600">
-            ${inv.publicaciones.filter(p=>p.q==='Q1').length||'—'}</td>
-          <td style="text-align:right">${(()=>{
-            const n=inv.n_oa||inv.publicaciones.filter(p=>p.is_oa).length;
-            const tot=inv.publicaciones.length;
-            const pct=tot?Math.round(n/tot*100):0;
-            return n?`<span style="color:#34d399;font-weight:600">${pct}%</span>`:'—';
-          })()}</td>
-          <td style="text-align:right">${inv.proyectos_anid.length||'—'}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table></div>`;
-}
+        // Extraer título:
+        // 1. Si tiene etiqueta <i> (referencias del Gestor manual)
+        const matchTituloHTML = ref.match(/<i>([^<]+)<\/i>/);
+        let titulo = matchTituloHTML ? matchTituloHTML[1].trim() : '';
 
-// ─── TAB SWITCHING ───────────────────────────
-function sw(name, btn) {
-  document.querySelectorAll('.tc').forEach(el=>{el.classList.remove('on');el.style.display='none';});
-  document.querySelectorAll('.tb').forEach(el=>el.classList.remove('on'));
-  const tgt=document.getElementById(`tc-${name}`);
-  if(tgt){tgt.style.display='block';tgt.classList.add('on');}
-  if(btn){
-    const btns=document.querySelectorAll('.tb');
-    btns.forEach(b=>{ if(b.textContent.toLowerCase().includes(name)||
-      (name==='ov'&&b.textContent.includes('Resumen'))||
-      (name==='pub'&&b.textContent.includes('Pub'))||
-      (name==='col'&&b.textContent.includes('Col'))||
-      (name==='an'&&b.textContent.includes('ANID'))||
-      (name==='ids'&&b.textContent.includes('ID'))||
-      (name==='gl'&&b.textContent.includes('Global')))
-      b.classList.add('on');
+        // 2. Si no tiene <i> (referencias del Extractor), tomar todo lo que va
+        //    después de "(año)" con cualquier separador (. : – -)
+        //    hasta el siguiente ". Mayúscula+minúscula" que indica ciudad/editorial
+        if (!titulo) {
+            const despuesAnio = refLimpia.replace(/^.+?\(\d{4}\)[.:\s–\-]+/, '');
+            const cortarEn = despuesAnio.search(/\.\s+[A-Z][a-z]/);
+            titulo = cortarEn > 0 ? despuesAnio.substring(0, cortarEn).trim() : despuesAnio.split(/[.:]/)[0].trim();
+        }
+
+        // 3. Fallback final: usar toda la referencia limpia sin autor y año
+        if (!titulo) {
+            titulo = refLimpia.replace(/^[^(]+\(\d{4}\)\.\s*/, '').substring(0, 100);
+        }
+
+        if (!titulo) return;
+
+        // Evitar duplicados
+        const tituloNorm = titulo.toLowerCase().replace(/\s+/g, ' ');
+        const existe = disp_items.some(i => i.titulo.toLowerCase().replace(/\s+/g, ' ') === tituloNorm);
+        if (!existe) { disp_items.push({ titulo, autor, anio, estado: 'sin' }); agregados++; }
     });
-  }
-  if(name==='gl') renderGL();
+    disp_renderTabla();
+    alert(`\u2705 ${agregados} libro(s) importados desde el Gestor.`);
 }
 
-// ─── EXPORT ──────────────────────────────────
-function exportXLSX() {
-  const wb=XLSX.utils.book_new();
-  const res=[['Investigador','UA','ORCID iD','Fuente ORCID','Scopus ID','Research ID','H-index','Documentos','Citas','Coautores','Obras ORCID','Proyectos ANID']];
-  invs.forEach(i=>res.push([i.nombre_completo,i.ua,i.orcid_id,i.orcid_src,i.scopus_id,i.research_id,i.h_index,i.documentos,i.citas,i.coautores,i.obras_orcid,i.proyectos_anid.length]));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(res),'Resumen');
-  const pubs=[['Investigador','Título','Revista','Año','Citas','DOI','Enlace']];
-  invs.forEach(i=>i.publicaciones.forEach(p=>pubs.push([i.nombre_completo,p.titulo,p.revista,p.año,p.citas,p.doi,p.enlace])));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(pubs),'Publicaciones');
-  const anid=[['Investigador','Código','Título','Tipo','Año','Monto','Estado']];
-  invs.forEach(i=>i.proyectos_anid.forEach(p=>anid.push([i.nombre_completo,p.codigo||p.code,p.titulo||p.title,p.tipo,p.año_inicio||p.year,p.monto,p.estado||p.status])));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(anid),'ANID');
-  XLSX.writeFile(wb,`Vigilancia_${new Date().toISOString().slice(0,10)}.xlsx`);
-}
-function exportJSON() {
-  const blob=new Blob([JSON.stringify({generado:new Date().toISOString(),investigadores:invs},null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download=`vigilancia_${new Date().toISOString().slice(0,10)}.json`; a.click();
+function disp_buscarEnCatalogo(idx) {
+    const item = disp_items[idx];
+    // Normalizar texto para KOHA — apóstrofe a espacio, luego quitar tildes
+    function disp_normalizarQuery(texto) {
+        return texto
+            .replace(/[''´`]/g, ' ')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9\s]/g, ' ')
+            .replace(/\s+/g, ' ').trim();
+    }
+
+    // Query formato KOHA: apellido AND palabra1 AND palabra2
+    function disp_construirQuery(titulo, autor) {
+        const stopwords = new Set(['de','la','le','les','du','des','el','los','las','the','a','an','en','et','of','in','sur','d','y','con','por','un','una','al','del','Histoire','historia']);
+        const apellido = autor ? disp_normalizarQuery(autor.split(',')[0].trim()) : '';
+        const palabras = disp_normalizarQuery(titulo)
+            .split(' ')
+            .filter(p => p.length > 3 && !stopwords.has(p.toLowerCase()))
+            .slice(0, 1);
+        return [apellido, ...palabras].filter(Boolean).join(' & ');
+    }
+
+    // Buscar con formato AND
+    const query = disp_construirQuery(item.titulo, item.autor);
+    const url = OPAC_BASE + encodeURIComponent(query);
+    window.open(url, '_blank');
 }
 
-// ─── UTILS ───────────────────────────────────
-function toast(msg,isErr=false){
-  const t=document.createElement('div');
-  t.textContent=msg;
-  Object.assign(t.style,{position:'fixed',bottom:'22px',left:'50%',transform:'translateX(-50%)',
-    background:isErr?'#7f1d1d':'#0f2d1a',border:`1px solid ${isErr?'#f87171':'#34d399'}`,
-    color:isErr?'#fca5a5':'#34d399',padding:'11px 18px',borderRadius:'8px',fontSize:'12px',
-    zIndex:'9999',maxWidth:'460px',textAlign:'center',fontWeight:'500',boxShadow:'0 4px 20px rgba(0,0,0,.4)'});
-  document.body.appendChild(t); setTimeout(()=>t.remove(),4200);
+function disp_setEstado(idx, estado) {
+    disp_items[idx].estado = estado;
+    disp_renderTabla();
 }
 
-function resetApp(){
-  invs=[]; jsonData=null; sel=0;
-  ['up','proc','main'].forEach(id=>document.getElementById(id).style.display='');
-  document.getElementById('up').style.display='flex';
-  document.getElementById('proc').style.display='none';
-  document.getElementById('main').style.display='none';
-  document.getElementById('btn-rst').classList.add('hidden');
-  document.getElementById('fi').value='';
+function disp_eliminar(idx) {
+    disp_items.splice(idx, 1);
+    disp_renderTabla();
+}
+
+function disp_renderTabla() {
+    const tbody = document.getElementById('disp_tbody');
+    tbody.innerHTML = '';
+
+    if (disp_items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Aún no hay libros en la lista. Agrega uno arriba o importa desde el Gestor.</td></tr>';
+        document.getElementById('disp_resumen').style.display = 'none';
+        return;
+    }
+
+    disp_items.forEach((item, idx) => {
+        const estadoInfo = DISP_ESTADOS[item.estado];
+        tbody.innerHTML += `
+            <tr class="${estadoInfo.cls}">
+                <td><strong>${item.titulo}</strong></td>
+                <td>${item.autor || '<span class="text-muted">—</span>'}</td>
+                <td>${item.anio || '<span class="text-muted">—</span>'}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary w-100" onclick="disp_buscarEnCatalogo(${idx})" title="Abre el catálogo PUCV con esta búsqueda">
+                        🔍 Buscar
+                    </button>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm" onchange="disp_setEstado(${idx}, this.value)">
+                        <option value="sin"        ${item.estado==='sin'        ?'selected':''}>⬜ Sin verificar</option>
+                        <option value="disponible" ${item.estado==='disponible' ?'selected':''}>✅ Disponible</option>
+                        <option value="prestado"   ${item.estado==='prestado'   ?'selected':''}>🟡 Prestado</option>
+                        <option value="noesta"     ${item.estado==='noesta'     ?'selected':''}>🔴 No está</option>
+                    </select>
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-danger" onclick="disp_eliminar(${idx})">✕</button>
+                </td>
+            </tr>`;
+    });
+
+    // Actualizar contadores del resumen
+    const cnts = { disponible:0, prestado:0, noesta:0, sin:0 };
+    disp_items.forEach(i => cnts[i.estado]++);
+    document.getElementById('disp_cnt_disponible').textContent = cnts.disponible;
+    document.getElementById('disp_cnt_prestado').textContent   = cnts.prestado;
+    document.getElementById('disp_cnt_noesta').textContent     = cnts.noesta;
+    document.getElementById('disp_cnt_sin').textContent        = cnts.sin;
+    document.getElementById('disp_resumen').style.display      = 'block';
+}
+
+function disp_exportarExcel() {
+    if (!disp_items.length) return alert('No hay datos para exportar.');
+    const estadoTexto = { sin:'Sin verificar', disponible:'Disponible', prestado:'Prestado / Revisar', noesta:'No está en catálogo' };
+    const datos = disp_items.map(i => ({
+        'Título':          i.titulo,
+        'Autor':           i.autor  || '',
+        'Año':             i.anio   || '',
+        'Disponibilidad':  estadoTexto[i.estado],
+        'URL Catálogo':    OPAC_BASE + encodeURIComponent(disp_construirQuery(i.titulo, i.autor))
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(datos), 'Disponibilidad PUCV');
+    XLSX.writeFile(wb, 'Disponibilidad_Bibliografica_PUCV.xlsx');
+}
+
+function disp_limpiar() {
+    if (!confirm('¿Limpiar toda la lista de disponibilidad?')) return;
+    disp_items = [];
+    disp_renderTabla();
 }
 </script>
+
+
 </body>
 </html>
