@@ -1106,7 +1106,7 @@
             }
         });
 
-        if (!nombre) nombre = filename.replace(/.( pdf|docx)$/i, '').replace(/[-_]/g, ' ').trim();
+        if (!nombre) nombre = filename.replace(/\.(pdf|docx)$/i, '').replace(/[-_]/g, ' ').trim();
 
         // Encontrar sección bibliografía y procesar párrafo a párrafo
         let enBiblio = false;
@@ -1143,15 +1143,16 @@
 
         // Condiciones de parada
         const esFin = t => {
-            // Normalizar para evitar problemas de codificación de tildes
             const tn = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            return /^(?:VIII|IX|X{1,3})\.\s+/i.test(t)
+            return /^(?:VIII|IX|X{1,3})[\.\s]/i.test(t)          // con O sin punto: "VIII." y "VIII SOBRE"
                 || /^SOBRE\s+INTEGRIDAD/i.test(t)
-                || tn.startsWith('academico responsable')   // firma final del programa
+                || tn.startsWith('academico responsable')
+                || tn.startsWith('unidad responsable')
                 || tn.startsWith('fecha de elaboracion')
                 || tn.startsWith('fecha de actualizacion')
                 || tn.startsWith('fecha de modificacion')
-                || tn.includes('webgraf')                   // sección Webgrafía
+                || tn.includes('webgraf')
+                || /(?:\d+\.\s*)?recursos\s+de\s+aprendizaje/i.test(tn)  // "3. Recursos de aprendizaje"
                 || /Otros\s+materiales\s+de\s+apoyo/i.test(t);
         };
 
@@ -1243,7 +1244,7 @@
         }
 
         if (!nombre || nombre.length > 100)
-            nombre = filename.replace(/.( pdf|docx)$/i, '').replace(/[-_]/g, ' ').trim();
+            nombre = filename.replace(/\.(pdf|docx)$/i, '').replace(/[-_]/g, ' ').trim();
 
         // Encontrar inicio de bibliografía — FIX: incluye "VII. BIBLIOGRAFÍA Y OTROS RECURSOS..."
         let idxBiblio = -1;
@@ -1269,16 +1270,15 @@
         // FIX: detectar fin de sección bibliografía
         const esFin = t => {
             const tn = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            return /^(?:VIII|IX|X|XI)\.\s+/i.test(t)
+            return /^(?:VIII|IX|X|XI)[\.\s]/i.test(t)             // con O sin punto: "VIII." y "VIII SOBRE"
                 || /^SOBRE\s+INTEGRIDAD/i.test(t)
                 || tn.startsWith('academico responsable')
                 || tn.startsWith('unidad responsable')
                 || tn.startsWith('fecha de elaboracion')
                 || tn.startsWith('fecha de actualizacion')
                 || tn.startsWith('fecha de modificacion')
-                || tn.includes('webgraf');
-            // NOTA: NO incluir "plataforma aula virtual" — en QUI/BIO/MAT aparece
-            // como sección 1 ANTES de las referencias, no como condición de fin
+                || tn.includes('webgraf')
+                || /(?:\d+\.\s*)?recursos\s+de\s+aprendizaje/i.test(tn); // "3. Recursos de aprendizaje"
         };
 
         let tipoActual = 'Básica';
