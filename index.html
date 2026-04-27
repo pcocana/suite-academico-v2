@@ -385,8 +385,8 @@
 
             <div class="drop-zone" id="dropZone">
                 <h4>📂 Arrastra tus archivos aquí</h4>
-                <p class="text-muted">Soporta PDF y Word (.docx). <strong>Mejorado para detectar sección de bibliografía en programas PUCV.</strong></p>
-                <input type="file" id="fileInput" multiple style="display:none">
+                <p class="text-muted">Soporta PDF, Word (.docx) y texto plano (.txt). <strong>Mejorado para detectar sección de bibliografía en programas PUCV.</strong></p>
+                <input type="file" id="fileInput" multiple accept=".pdf,.docx,.txt" style="display:none">
                 <button class="btn btn-outline-primary btn-sm mt-2" onclick="document.getElementById('fileInput').click()">O selecciona archivos</button>
             </div>
 
@@ -1064,9 +1064,15 @@
                     }
                 };
                 reader.readAsArrayBuffer(file);
+            } else if (ext === 'txt') {
+                // Texto plano: el formato más limpio, se procesa igual que PDF
+                reader.onload = function() {
+                    extraerYAcumular(this.result, file.name);
+                };
+                reader.readAsText(file, 'UTF-8');
             } else {
                 ext_filesProcesados.delete(file.name);
-                alert(`Formato no soportado: .${ext}\nSube programas de asignatura en PDF o Word (.docx).`);
+                alert(`Formato no soportado: .${ext}\nSube programas de asignatura en PDF, Word (.docx) o texto plano (.txt).`);
             }
         });
     }
@@ -1106,42 +1112,53 @@
             }
         });
 
-        if (!nombre) nombre = filename.replace(/\.(pdf|docx)$/i, '').replace(/[-_]/g, ' ').trim();
+        if (!nombre) nombre = filename.replace(/\.(pdf|docx|txt)$/i, '').replace(/[-_]/g, ' ').trim();
 
         // Encontrar sección bibliografía y procesar párrafo a párrafo
         let enBiblio = false;
         let tipoActual = 'Básica';
-        let enTipo = false;
+        let enTipo = false; // si ya detectamos al menos un marcador Básica/Complementaria
 
         const esTituloBiblio = t => /(?:VI{1,3}\.?\s*)?(?:BIBLIOGRAFÍA|Referencias\s+Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)(?:\s+Y\s+.+)?$/i.test(t);
+        const esTipoBasica   = t => /(?:\d+\.\s*)?(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)/i.test(t);
+        const esTipoComp     = t => /(?:\d+\.\s*)?(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
+        const limpiarLinea   = t => t.replace(/^[\s•●\-\*✔✓►▪▸◆◉\d\.]+/, '').trim();
 
-        // SOLO estos 4 marcadores cambian el tipo — cualquier otra cosa se ignora
-        const esTipoBasica = t => /^[\s\d\.✔✓►•●✅-]*(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)\s*:?\s*$/i.test(t.trim());
-        const esTipoComp   = t => /^[\s\d\.✔✓►•●✅-]*(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)\s*:?\s*$/i.test(t.trim());
+        // Detección estricta: APA con año (Apellido, Nombre. Título. Editorial, 2020.)
+        const esRefEstricta = t => {
+            const tc = t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').trim();
+            return tc.length > 35 && /\d{4}|s\.f\./.test(tc) && /^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}[,;]/.test(tc);
+        };
 
-        const limpiarLinea = t => t.replace(/^[\s•●\-\*✔✓►▪▸◆◉\d\.]+/, '').trim();
-
-        // Una referencia es cualquier línea sustancial que no sea una URL ni una firma
-        const esReferencia = t => {
-            const tc = limpiarLinea(t);
+        // Detección laxa: cualquier línea sustancial tras un marcador Básica/Complementaria
+        // cubre formatos como "Nombre Apellido, Título, Editorial." sin año
+        const esRefLaxa = t => {
+            const tc = t.replace(/^[\s•●\-\*✔✓►▪▸◆◉\d\.]+/, '').trim();
             const tn = tc.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            if (tc.length <= 30) return false;
-            if (/^https?:\/\/|^www\.|^ftp:/i.test(tc)) return false;
-            if (tn.startsWith('academico responsable') || tn.startsWith('unidad responsable')) return false;
+            if (tc.length <= 35) return false;
+            if (/^https?:\/\/|^www\.|^ftp:/i.test(tc)) return false;      // URLs
+            if (/^\d+\.\s+[A-ZÁÉÍÓÚ]/.test(tc)) return false;             // "1. Recursos Didácticos"
+            if (/^(?:Materiales|Cuaderno|Hojas|Data\s+show|Laboratorio|Aula|Apuntes|Sitio\s+web|Computador)/i.test(tc)) return false;
+            // Excluir explícitamente líneas de firma y secciones finales
+            if (tn.startsWith('academico responsable')) return false;
             if (tn.startsWith('fecha de ')) return false;
+            if (tn.includes('webgraf')) return false;
+            if (/^Otros\s+materiales/i.test(tc)) return false;
             return true;
         };
 
+        // Condiciones de parada
         const esFin = t => {
+            // Normalizar para evitar problemas de codificación de tildes
             const tn = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
             return /^(?:VIII|IX|X{1,3})\.\s+/i.test(t)
                 || /^SOBRE\s+INTEGRIDAD/i.test(t)
-                || tn.startsWith('academico responsable')
-                || tn.startsWith('unidad responsable')
+                || tn.startsWith('academico responsable')   // firma final del programa
                 || tn.startsWith('fecha de elaboracion')
                 || tn.startsWith('fecha de actualizacion')
                 || tn.startsWith('fecha de modificacion')
-                || tn.includes('webgraf');
+                || tn.includes('webgraf')                   // sección Webgrafía
+                || /Otros\s+materiales\s+de\s+apoyo/i.test(t);
         };
 
         parrafos.forEach(p => {
@@ -1149,13 +1166,14 @@
             if (!enBiblio) return;
             if (esFin(p)) { enBiblio = false; enTipo = false; return; }
 
-            // Solo estos 4 marcadores exactos cambian el tipo
             if (esTipoBasica(p)) { tipoActual = 'Básica';         enTipo = true; return; }
             if (esTipoComp(p))   { tipoActual = 'Complementaria'; enTipo = true; return; }
 
-            // Solo capturar referencias si ya detectamos un marcador de tipo
-            if (enTipo && esReferencia(p)) {
-                const refLimpia = limpiarLinea(p).replace(/\s*\.+\s*\.+/g, '.').trim();
+            // Modo estricto (sin tipo previo): exige APA con año
+            // Modo laxa (con tipo previo): acepta cualquier línea sustancial sin URL
+            const esRef = enTipo ? esRefLaxa(p) : esRefEstricta(p);
+            if (esRef) {
+                const refLimpia = p.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').replace(/\s*\.+\s*\.+/g, '.').trim();
                 ext_datos.push({ archivo: filename, carrera, clave, nombre, tipo: tipoActual, ref: refLimpia, status: validarCalidad(refLimpia) });
             }
         });
@@ -1166,29 +1184,45 @@
     // FUNCIÓN CORE PARA PDF — procesa línea a línea respetando estructura
     function extraerYAcumular(texto, filename) {
         texto = texto.replace(/\r/g, '\n').replace(/\t/g, ' ');
-        const lineas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        // Normalizar espacios múltiples (artefacto de texto justificado en TXT)
+        const lineas = texto.split('\n').map(l => l.trim().replace(/\s{2,}/g, ' ')).filter(l => l.length > 0);
 
         let carrera = '', clave = '', nombre = '';
 
-        lineas.forEach(l => {
+        // Detectar metadatos en dos modos:
+        // Modo A (PDF/ICI): "Sigla   ICI 1241" en la misma línea
+        // Modo B (TXT): "Sigla" en una línea, "MAT104" en la siguiente
+        for (let i = 0; i < lineas.length && !(clave && nombre); i++) {
+            const l = lineas[i];
+            // Modo A: etiqueta + valor en la misma línea
             if (!clave) {
                 const m = l.match(/(?:Sigla|Código|Clave)[\s:\t,]+([A-Z]{2,6}\s*\d{3,5})/i);
-                if (m) clave = m[1].trim();
+                if (m) { clave = m[1].trim(); continue; }
             }
             if (!nombre) {
-                // FIX: anclar al inicio de línea para evitar capturar "I. IDENTIFICACIÓN DE LA ASIGNATURA"
                 const m = l.match(/^Nombre\s+(?:de\s+la\s+)?Asignatura[\s:\t]+(.+)/i)
                        || l.match(/^Nombre\s+del?\s+Curso[\s:\t]+(.+)/i);
-                if (m) nombre = m[1].trim().replace(/^"|"$/g, '').substring(0, 100);
+                if (m) { nombre = m[1].trim().replace(/^"|"$/g, '').substring(0, 100); continue; }
             }
             if (!carrera) {
                 const m = l.match(/^Carrera[\s:\t]+(.+)/i);
-                if (m) carrera = m[1].trim().substring(0, 60);
+                if (m) { carrera = m[1].trim().substring(0, 60); continue; }
             }
-        });
+            // Modo B: etiqueta sola en línea → valor en la siguiente línea
+            if (!clave && /^(?:Sigla|Código|Clave)\s*$/i.test(l) && i + 1 < lineas.length) {
+                const next = lineas[i + 1];
+                if (/^[A-Z]{2,6}\s*\d{3,5}$/.test(next)) { clave = next.trim(); continue; }
+            }
+            if (!nombre && /^Nombre\s+(?:de\s+la\s+)?Asignatura\s*$/i.test(l) && i + 1 < lineas.length) {
+                const next = lineas[i + 1];
+                if (next.length > 2 && next.length < 100 && !/^[A-Z]{2,6}\d/.test(next) && !/^\d+$/.test(next)) {
+                    nombre = next.trim(); continue;
+                }
+            }
+        }
 
         if (!nombre || nombre.length > 100)
-            nombre = filename.replace(/\.(pdf|docx)$/i, '').replace(/[-_]/g, ' ').trim();
+            nombre = filename.replace(/\.(pdf|docx|txt)$/i, '').replace(/[-_]/g, ' ').trim();
 
         // Encontrar inicio de bibliografía — FIX: incluye "VII. BIBLIOGRAFÍA Y OTROS RECURSOS..."
         let idxBiblio = -1;
@@ -1206,21 +1240,24 @@
         }
         if (idxBiblio === -1) return;
 
-        // SOLO estos 4 marcadores exactos cambian el tipo — cualquier otra cosa se ignora
-        const esTipoBasica = t => /^[\s\d\.✔✓►•●-]*(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)\s*:?\s*$/i.test(t.trim());
-        const esTipoComp   = t => /^[\s\d\.✔✓►•●-]*(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)\s*:?\s*$/i.test(t.trim());
-        const limpiarL     = t => t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').trim();
+        // FIX: detectar subencabezados con "Bibliografía Obligatoria:" y "Bibliografía Complementaria:"
+        const esTipoBasica = t => /(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)/i.test(t);
+        const esTipoComp   = t => /(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
+        // FIX: limpiar viñetas (•, ●, ✔, etc.) del inicio de línea
+        const limpiarL = t => t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').trim();
+        // FIX: detectar fin de sección bibliografía
         const esFin = t => {
             const tn = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
             return /^(?:VIII|IX|X|XI)\.\s+/i.test(t)
                 || /^SOBRE\s+INTEGRIDAD/i.test(t)
                 || tn.startsWith('academico responsable')
-                || tn.startsWith('unidad responsable')
+                || tn.startsWith('unidad responsable')      // MAT: "Unidad responsable de la elaboración..."
                 || tn.startsWith('fecha de elaboracion')
                 || tn.startsWith('fecha de actualizacion')
                 || tn.startsWith('fecha de modificacion')
-                || tn.includes('webgraf');
-            // NO incluir "plataforma aula virtual" — en QUI/BIO aparece ANTES de las refs
+                || tn.includes('webgraf')
+                || /plataforma\s+aula\s+virtual/i.test(tn) // MAT: "3. Plataforma Aula Virtual que contiene:"
+                || /Otros\s+materiales\s+de\s+apoyo/i.test(t);
         };
 
         let tipoActual = 'Básica';
@@ -1228,7 +1265,7 @@
 
         const guardarRef = () => {
             if (refActual.length > 30) {
-                const limpia = refActual.replace(/\s*\.+\s*\.+/g, '.').trim();
+                const limpia = refActual.replace(/\s{2,}/g, ' ').replace(/\s*\.+\s*\.+/g, '.').trim();
                 ext_datos.push({ archivo: filename, carrera, clave, nombre, tipo: tipoActual, ref: limpia, status: validarCalidad(limpia) });
             }
             refActual = '';
@@ -1638,54 +1675,37 @@ function disp_cargarDesdeGestor() {
     if (!gestor_refs.length) return alert('El Gestor Principal no tiene referencias cargadas aún.');
     let agregados = 0;
     gestor_refs.forEach(r => {
-        const refOrig = r.Referencia || '';
-        const ref = refOrig.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-        if (!ref) return;
+        const ref = r.Referencia || '';
+        const refLimpia = ref.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 
-        let titulo = '', autor = '', anio = '';
+        // Extraer autor: antes del primer "("
+        const matchAutor = refLimpia.match(/^\s*([^(]+)\s*\(/);
+        const autor = matchAutor ? matchAutor[1].trim() : '';
 
-        // ── 1. AÑO ──────────────────────────────────────────────────────
-        // Primero en paréntesis: (2006), luego suelto al final: ..., 2014.
-        const mAnioP = ref.match(/\((\d{4})\)/);
-        const mAnioS = ref.match(/[,\s](\d{4})[.\s]*$/);
-        anio = mAnioP ? mAnioP[1] : (mAnioS ? mAnioS[1] : '');
+        // Extraer año
+        const matchAnio = refLimpia.match(/\((\d{4})\)/);
+        const anio = matchAnio ? matchAnio[1] : '';
 
-        // ── 2. TÍTULO ───────────────────────────────────────────────────
-        // a) Entre comillas tipográficas o rectas (formato más confiable)
-        const mTitQ = ref.match(/[""«""]([^""»""]{4,})[""»""]/);
-        if (mTitQ) titulo = mTitQ[1].trim();
+        // Extraer título:
+        // 1. Si tiene etiqueta <i> (referencias del Gestor manual)
+        const matchTituloHTML = ref.match(/<i>([^<]+)<\/i>/);
+        let titulo = matchTituloHTML ? matchTituloHTML[1].trim() : '';
 
-        // b) En etiqueta <i> del gestor manual
+        // 2. Si no tiene <i> (referencias del Extractor), tomar todo lo que va
+        //    después de "(año)" con cualquier separador (. : – -)
+        //    hasta el siguiente ". Mayúscula+minúscula" que indica ciudad/editorial
         if (!titulo) {
-            const mHTML = refOrig.match(/<i>([^<]+)<\/i>/);
-            if (mHTML) titulo = mHTML[1].trim();
+            const despuesAnio = refLimpia.replace(/^.+?\(\d{4}\)[.:\s–\-]+/, '');
+            const cortarEn = despuesAnio.search(/\.\s+[A-Z][a-z]/);
+            titulo = cortarEn > 0 ? despuesAnio.substring(0, cortarEn).trim() : despuesAnio.split(/[.:]/)[0].trim();
         }
 
-        // c) Después del año entre paréntesis (APA estándar sin comillas)
-        if (!titulo && anio && mAnioP) {
-            const despues = ref.replace(/^.*?\(\d{4}\)[.:\s–\-]*/, '').trim();
-            // Cortar en ". Ciudad" o ". Editorial" (. + Mayúscula + minúscula)
-            const corte = despues.search(/\.\s+[A-Z][a-záéíóú]/);
-            titulo = corte > 0 ? despues.slice(0, corte).trim() : despues.split(/\.\s+/)[0].trim();
+        // 3. Fallback final: usar toda la referencia limpia sin autor y año
+        if (!titulo) {
+            titulo = refLimpia.replace(/^[^(]+\(\d{4}\)\.\s*/, '').substring(0, 100);
         }
 
-        // d) Fallback: después del primer punto largo
-        if (!titulo) titulo = ref.slice(0, 100);
-
-        // ── 3. AUTOR ────────────────────────────────────────────────────
-        if (/^[""«""]/.test(ref)) {
-            // Formato QUI: "TITULO", Autor. Editorial... → autor viene después
-            const sinTit = ref.replace(/^[""«""][^""»""]*[""»""][\s,.\-–]+/, '');
-            // Tomar hasta primer punto+espacio+Mayúscula+minúscula (ciudad/editorial)
-            const mAut = sinTit.match(/^(.{2,80}?)(?:\.\s+[A-ZÁÉÍÓÚ][a-záéíóú]{2}|\s+Ed\.|\s*\()/);
-            autor = mAut ? mAut[1].replace(/[,.\s]+$/, '').trim() : sinTit.split(/\.\s+[A-Z]/)[0].trim();
-        } else {
-            // Formato MAT/APA: Autor (año) "Titulo"... → autor viene antes
-            const mAut = ref.match(/^(.+?)(?=\s*\(|\s*[""«""])/);
-            autor = mAut ? mAut[1].replace(/[.,;\s]+$/, '').trim() : '';
-        }
-
-        if (!titulo || titulo.length < 3) return;
+        if (!titulo) return;
 
         // Evitar duplicados
         const tituloNorm = titulo.toLowerCase().replace(/\s+/g, ' ');
@@ -1693,7 +1713,7 @@ function disp_cargarDesdeGestor() {
         if (!existe) { disp_items.push({ titulo, autor, anio, estado: 'sin' }); agregados++; }
     });
     disp_renderTabla();
-    alert(`✅ ${agregados} libro(s) importados desde el Gestor.`);
+    alert(`\u2705 ${agregados} libro(s) importados desde el Gestor.`);
 }
 
 function disp_buscarEnCatalogo(idx) {
