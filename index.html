@@ -1189,34 +1189,61 @@
 
         let carrera = '', clave = '', nombre = '';
 
-        // Detectar metadatos en dos modos:
-        // Modo A (PDF/ICI): "Sigla   ICI 1241" en la misma línea
-        // Modo B (TXT): "Sigla" en una línea, "MAT104" en la siguiente
+        // Detectar metadatos en tres modos:
+        // Modo A (PDF normal): "Sigla   ICI 1241" en la misma línea
+        // Modo B (TXT col-única): "Sigla" en línea i, valor en línea i+1
+        // Modo C (TXT dos-col): etiquetas todas primeras, valores todos después
+        //   ej: Sigla(5), Nombre(6)...Área(16) → MAT104(17), Álgebra(18)...
+
+        // Modo A — mismo recorrido línea a línea
         for (let i = 0; i < lineas.length && !(clave && nombre); i++) {
             const l = lineas[i];
-            // Modo A: etiqueta + valor en la misma línea
             if (!clave) {
                 const m = l.match(/(?:Sigla|Código|Clave)[\s:\t,]+([A-Z]{2,6}\s*\d{3,5})/i);
-                if (m) { clave = m[1].trim(); continue; }
+                if (m) { clave = m[1].trim(); }
             }
             if (!nombre) {
                 const m = l.match(/^Nombre\s+(?:de\s+la\s+)?Asignatura[\s:\t]+(.+)/i)
                        || l.match(/^Nombre\s+del?\s+Curso[\s:\t]+(.+)/i);
-                if (m) { nombre = m[1].trim().replace(/^"|"$/g, '').substring(0, 100); continue; }
+                if (m) { nombre = m[1].trim().replace(/^"|"$/g, '').substring(0, 100); }
             }
             if (!carrera) {
                 const m = l.match(/^Carrera[\s:\t]+(.+)/i);
-                if (m) { carrera = m[1].trim().substring(0, 60); continue; }
+                if (m) { carrera = m[1].trim().substring(0, 60); }
             }
-            // Modo B: etiqueta sola en línea → valor en la siguiente línea
-            if (!clave && /^(?:Sigla|Código|Clave)\s*$/i.test(l) && i + 1 < lineas.length) {
-                const next = lineas[i + 1];
-                if (/^[A-Z]{2,6}\s*\d{3,5}$/.test(next)) { clave = next.trim(); continue; }
-            }
-            if (!nombre && /^Nombre\s+(?:de\s+la\s+)?Asignatura\s*$/i.test(l) && i + 1 < lineas.length) {
-                const next = lineas[i + 1];
-                if (next.length > 2 && next.length < 100 && !/^[A-Z]{2,6}\d/.test(next) && !/^\d+$/.test(next)) {
-                    nombre = next.trim(); continue;
+        }
+
+        // Modo B/C — tabla con etiquetas y valores separados
+        if (!clave || !nombre) {
+            // Encontrar índice de "Sigla" sola y de "Nombre Asignatura" sola
+            const siglaIdx  = lineas.findIndex(l => /^(?:Sigla|Código|Clave)\s*$/i.test(l));
+            const nombreIdx = lineas.findIndex(l => /^Nombre\s+(?:de\s+la\s+)?Asignatura\s*$/i.test(l)
+                                                  || /^Nombre\s+del?\s+Curso\s*$/i.test(l));
+
+            if (siglaIdx >= 0 && !clave) {
+                // Escanear hacia adelante buscando el primer código (MAT104, ICI2241, etc.)
+                let claveIdx = -1;
+                for (let j = siglaIdx + 1; j < Math.min(siglaIdx + 25, lineas.length); j++) {
+                    if (/^[A-Z]{2,6}\s*\d{3,5}\s*$/.test(lineas[j])) { clave = lineas[j].trim(); claveIdx = j; break; }
+                }
+                // Modo C: calcular offset y buscar nombre en la misma posición relativa
+                if (claveIdx >= 0 && nombreIdx >= 0 && !nombre) {
+                    const offset = claveIdx - siglaIdx;
+                    const nValIdx = nombreIdx + offset;
+                    if (nValIdx < lineas.length) {
+                        const nVal = lineas[nValIdx].trim();
+                        // Validar que no sea un código, número o label
+                        if (nVal.length > 2 && nVal.length < 100 && !/^[A-Z]{2,6}\d/.test(nVal) && !/^\d+$/.test(nVal) && !/^Horas|^Créditos|^Semestre|^Área/i.test(nVal)) {
+                            nombre = nVal;
+                        }
+                    }
+                }
+                // Modo B: valor justo en la siguiente línea
+                if (!nombre && nombreIdx >= 0) {
+                    const next = lineas[nombreIdx + 1] || '';
+                    if (next.length > 2 && next.length < 100 && !/^\d+$/.test(next) && !/^[A-Z]{2,6}\d/.test(next)) {
+                        nombre = next.trim();
+                    }
                 }
             }
         }
@@ -1251,13 +1278,13 @@
             return /^(?:VIII|IX|X|XI)\.\s+/i.test(t)
                 || /^SOBRE\s+INTEGRIDAD/i.test(t)
                 || tn.startsWith('academico responsable')
-                || tn.startsWith('unidad responsable')      // MAT: "Unidad responsable de la elaboración..."
+                || tn.startsWith('unidad responsable')
                 || tn.startsWith('fecha de elaboracion')
                 || tn.startsWith('fecha de actualizacion')
                 || tn.startsWith('fecha de modificacion')
-                || tn.includes('webgraf')
-                || /plataforma\s+aula\s+virtual/i.test(tn) // MAT: "3. Plataforma Aula Virtual que contiene:"
-                || /Otros\s+materiales\s+de\s+apoyo/i.test(t);
+                || tn.includes('webgraf');
+            // NOTA: NO incluir "plataforma aula virtual" — en QUI/BIO/MAT aparece
+            // como sección 1 ANTES de las referencias, no como condición de fin
         };
 
         let tipoActual = 'Básica';
