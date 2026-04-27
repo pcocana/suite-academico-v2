@@ -1298,8 +1298,11 @@
             if (esTipoBasica(l)) { guardarRef(); tipoActual = 'Básica';         continue; }
             if (esTipoComp(l))   { guardarRef(); tipoActual = 'Complementaria'; continue; }
 
-            // Detectar inicio de referencia: •, ●  (ICI style) o - guión (MAT style)
-            if (/^[•●\-]/.test(l)) {
+            // Detectar inicio de referencia:
+            // • ●  → viñeta (ICI/Informática style)
+            // -    → guión (MAT/Bioquímica style)
+            // 1.   → numerado (IMA/Pedagogía style)
+            if (/^[•●\-]/.test(l) || /^\d+\.\s+[A-ZÁÉÍÓÚÑÜ]/.test(l)) {
                 if (refActual.length > 0) guardarRef();
                 const lc = limpiarL(l);
                 if (lc.length > 5) refActual = lc;
