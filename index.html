@@ -1009,10 +1009,20 @@
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
 
-    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.backgroundColor='#e6f0ff'; });
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); dropZone.style.backgroundColor='#e6f0ff'; });
     dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.style.backgroundColor='#f8fbff'; });
-    dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.style.backgroundColor='#f8fbff'; ext_procesarArchivos(e.dataTransfer.files); });
-    fileInput.addEventListener('change', (e) => ext_procesarArchivos(e.target.files));
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.backgroundColor='#f8fbff';
+        fileInput.value = ''; // resetear para evitar que su change event re-procese archivos anteriores
+        ext_procesarArchivos(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', (e) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        ext_procesarArchivos(e.target.files);
+        fileInput.value = ''; // resetear para evitar re-disparo con archivos anteriores
+    });
 
     function ext_procesarArchivos(files) {
         document.getElementById('statusLog').innerText = `Procesando ${files.length} archivos...`;
