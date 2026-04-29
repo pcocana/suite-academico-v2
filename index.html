@@ -1013,6 +1013,49 @@ function ext_procesarArchivos(files){
   });
 }
 
+// ── Utilidades globales compartidas entre ambos extractores ─────────────────
+function limpiarVineta(t){return String(t||'').replace(/^[\s•●\-\*✔✓►▪▸◆◉\uf0b7\uf0fc]+/,'').trim();}
+
+// esBibFin: detecta líneas que señalan el FIN de la sección bibliografía
+// Incluye secciones de recursos, texto de metodología, info institucional, etc.
+function esBibFin(rawLine){
+  const t=limpiarVineta(String(rawLine||''));
+  const tn=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  return (
+    // Secciones romanas / encabezados post-bibliografía
+    /^(?:VIII|IX|X{1,3})[\.\s]/i.test(t) ||
+    /^SOBRE\s+INTEGRIDAD/i.test(t) ||
+    // Pie de página institucional
+    tn.startsWith('academico responsable') ||
+    tn.startsWith('unidad responsable') ||
+    tn.startsWith('fecha de elaboracion') ||
+    tn.startsWith('fecha de actualizacion') ||
+    tn.startsWith('fecha de modificacion') ||
+    tn.startsWith('acta consejo') ||
+    // Webgrafía
+    tn.includes('webgraf') ||
+    // Secciones de recursos
+    /(?:\d+\.\s*)?recursos\s+de\s+aprendizaje/i.test(tn) ||
+    /^otros\s+materiales/i.test(tn) ||
+    /^recursos\s+did/i.test(tn) ||
+    // Ítems numerados de recursos ("3. Plataforma Aula Virtual", "1. Recursos Didácticos")
+    /^\d+\.\s+(?:plataforma|recursos?\s+did|materiales?\s+de\s+apoyo|aula\s+virtual|los\s+recursos)/i.test(tn) ||
+    // Sub-ítems de recursos ("a. Videos", "b. PPT", "c. Guías")
+    /^[a-f][.)]\s+(?:video|ppt|guia|data\s*show|proyector|pizarra|laboratorio|scopus|hipervincul|software)/i.test(tn) ||
+    // Sección de metodología / aprendizaje
+    /^el\s+aprendizaje\b/i.test(t) ||
+    /^los\s+materiales\s+de\s+apoyo/i.test(t) ||
+    /^estrategias\s+para\s+la\s+ejercitacion/i.test(tn) ||
+    // Datos de contacto / dirección institucional
+    /^avenida\b/i.test(tn) ||
+    /^telefono\b|^e-mail\b/i.test(tn) ||
+    // Lectura de artículos (lista de revistas)
+    /^lectura\s+de\s+art/i.test(tn) ||
+    // Artículos asignados por el profesor
+    /^articulos\s+y\s+otros\s+materiales/i.test(tn)
+  );
+}
+
 // ── splitRefMultiple: segunda pasada para bloques con múltiples refs ────────
 // Compartida por ambos extractores (PDF y DOCX)
 function splitRefMultiple(t){
@@ -1053,6 +1096,19 @@ function splitRefMultiple(t){
     }
     if(partsE.length){partsE.push(t.slice(ultimo).trim());const fE=partsE.filter(s=>s.trim().length>20).map(s=>s.trim());if(fE.length>1)return fE;}
   }
+  // Caso F: refs separadas por bullet ● inline dentro del mismo párrafo
+  if(/[●•]/.test(t)){
+    const parts=t.split(/\s*[●•]\s*/).map(s=>s.trim()).filter(s=>s.length>20);
+    if(parts.length>1)return parts;
+  }
+
+  // Caso G: recursos online concatenados — split en ". Autor," tras URL
+  // "...http://url.com Autor, Título..." → split antes del nuevo autor
+  if(/\[online\]|\[en\s+l[íi]nea\]|disponible\s+en:/i.test(t)){
+    const parts=t.split(/\s+(?=[A-ZÁÉÍÓÚÑÜ][^\n]{0,50}(?:\[Online\]|\[En\s+l[íi]nea\]|Disponible\s+en:))/i).map(s=>s.trim()).filter(s=>s.length>20);
+    if(parts.length>1)return parts;
+  }
+
   return[t];
 }
 
@@ -1100,7 +1156,6 @@ function extraerYAcumularDocx(html,filename){
   const esTipoComp=t=>/(?:\d+\.\s*)?(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
   const esRefEstricta=t=>{const tc=limpiarViñeta(t);return tc.length>35&&/\d{4}|s\.f\./.test(tc)&&/^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}[,;]/.test(tc);};
   const esRefLaxa=t=>{const tc=limpiarViñeta(t),tn=tc.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();if(tc.length<=35)return false;if(/^https?:\/\/|^www\.|^ftp:/i.test(tc))return false;if(/^\d+\.\s+[A-ZÁÉÍÓÚ]/.test(tc))return false;if(/^(?:Materiales|Cuaderno|Hojas|Data\s+show|Laboratorio|Aula|Apuntes|Sitio\s+web|Computador)/i.test(tc))return false;if(tn.startsWith('academico responsable')||tn.startsWith('fecha de ')||tn.includes('webgraf')||/^Otros\s+materiales/i.test(tc))return false;return true;};
-  const esFin=t=>{const tn=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();return /^(?:VIII|IX|X{1,3})[\.\s]/i.test(t)||/^SOBRE\s+INTEGRIDAD/i.test(t)||tn.startsWith('academico responsable')||tn.startsWith('unidad responsable')||tn.startsWith('fecha de elaboracion')||tn.startsWith('fecha de actualizacion')||tn.startsWith('fecha de modificacion')||tn.includes('webgraf')||/(?:\d+\.\s*)?recursos\s+de\s+aprendizaje/i.test(tn)||/Otros\s+materiales\s+de\s+apoyo/i.test(t);};
 
   // FIX 3: lógica de continuación refinada
   // ── REGLA PRIORITARIA compartida con el extractor PDF ─────────────────────
@@ -1144,7 +1199,7 @@ function extraerYAcumularDocx(html,filename){
     if(!pt)return;
     if(esTituloBiblio(pt)){guardarRef();enBiblio=true;return;}
     if(!enBiblio)return;
-    if(esFin(pt)){guardarRef();enBiblio=false;enTipo=false;return;}
+    if(esBibFin(pt)){guardarRef();enBiblio=false;enTipo=false;return;}
     if(esTipoBasica(pt)){guardarRef();tipoActual='Básica';enTipo=true;return;}
     if(esTipoComp(pt)){guardarRef();tipoActual='Complementaria';enTipo=true;return;}
 
@@ -1196,22 +1251,8 @@ function extraerYAcumular(texto,filename){
   const esTipoComp=t=>/(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
   const limpiarL=t=>t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/,'').trim();
   const esSoloViñeta=t=>/^[•●►▪▸◆◉✔✓\-\s]+$/.test(t);
-  // esFin verifica tanto la línea raw como la línea sin viñeta (por si el bullet precede la sección)
-  const esFin=t=>{
-    const tc=limpiarL(t).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-    const tn=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-    return /^(?:VIII|IX|X{1,3})[\.\s]/i.test(limpiarL(t))
-      ||/^SOBRE\s+INTEGRIDAD/i.test(limpiarL(t))
-      ||tn.startsWith('academico responsable')||tc.startsWith('academico responsable')
-      ||tn.startsWith('unidad responsable')||tc.startsWith('unidad responsable')
-      ||tn.startsWith('fecha de elaboracion')||tc.startsWith('fecha de elaboracion')
-      ||tn.startsWith('fecha de actualizacion')||tc.startsWith('fecha de actualizacion')
-      ||tn.startsWith('fecha de modificacion')||tc.startsWith('fecha de modificacion')
-      ||tn.includes('webgraf')||tc.includes('webgraf')
-      ||/(?:\d+\.\s*)?recursos\s+de\s+aprendizaje/i.test(tc)
-      ||/^Otros\s+materiales/i.test(limpiarL(t))     // "• Otros materiales de apoyo:"
-      ||/^Recursos\s+Did/i.test(limpiarL(t));         // "• Recursos Didácticos"
-  };
+  // Usa la función global esBibFin (cubre más patrones que la anterior)
+  const esFin=t=>esBibFin(t);
   // esLineaEditorial: editorial al INICIO de línea → siempre continuación, nunca nueva ref
   const esLineaEditorial=t=>/^(addison.?wesley|cambridge|oxford|elsevier|mcgraw.?hill|pearson|cengage|thomson|springer|wiley|routledge|prentice.?hall|university\s+press|editorial\s|ediciones?\s)/i.test(t.trim());
 
