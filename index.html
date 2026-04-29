@@ -1143,30 +1143,66 @@ function extraerYAcumular(texto,filename){
   // esLineaEditorial: editorial al INICIO de línea → siempre continuación, nunca nueva ref
   const esLineaEditorial=t=>/^(addison.?wesley|cambridge|oxford|elsevier|mcgraw.?hill|pearson|cengage|thomson|springer|wiley|routledge|prentice.?hall|university\s+press|editorial\s|ediciones?\s)/i.test(t.trim());
 
-  // ── Segunda pasada: split de bloque con múltiples refs concatenadas ───────
+  // ── Regla terminal: ¿la ref actual está gramaticalmente incompleta? ────────
+  // Si termina sin puntuación terminal → la siguiente línea es SIEMPRE continuación.
+  // Esto resuelve Cormen/Stein y Baase/Technology sin excepción.
+  const refSinTerminal=r=>{
+    if(!r||!r.trim())return false;
+    // Terminal OK: termina en . " ) ] - año - dígito
+    return!/[.!?")\]%\d]\s*$/.test(r.trim());
+  };
+
+  // ── Segunda pasada: split de bloque con múltiples refs concatenadas ────────
   function splitRefMultiple(t){
-    // Caso A: call numbers (005.133 MAR 2018) → separadores de refs-catálogo
+    t=t.trim();
+
+    // Caso A: call numbers (005.133 MAR 2018)
     if(/\(\d{3}\.\d+\s+\w+\s+\d{4}\)/.test(t)){
       const p=t.split(/\s*\(\d{3}\.\d+\s+\w+\s+\d{4}\)\s*/).filter(s=>s.trim().length>20);
       if(p.length>1)return p.map(s=>s.replace(/^\s*\.\s*/,'').trim());
     }
-    // Caso B: múltiples ISBNs → split entre ISBN y siguiente autor
-    const isbnCount=(t.match(/\bISBN[\s:]\s*[\dX -]{10,17}/gi)||[]).length;
+
+    // Caso B: múltiples ISBNs (con guiones, espacios, dígitos)
+    // Regex ampliado para capturar "ISBN 84- 2053438-2" con espacios internos
+    const isbnRe=/\bISBN[\s:][\s\dX-]{6,22}/gi;
+    const isbnCount=(t.match(isbnRe)||[]).length;
     if(isbnCount>1){
       const parts=[];let cur='';
-      t.split(/(\bISBN[\s:]\s*[\dX -]{10,17})/i).forEach(tok=>{
+      t.split(/(ISBN[\s:][\s\dX-]{6,22})/i).forEach(tok=>{
         if(/^ISBN/i.test(tok)){cur+=tok;}
-        else if(cur&&/^\s*[A-ZÁÉÍÓÚÑÜ]/.test(tok)){parts.push(cur.trim());cur=tok;}
+        else if(cur&&/^\s*\.?\s*[A-ZÁÉÍÓÚÑÜ]/.test(tok)){parts.push(cur.trim());cur=tok.replace(/^\s*\.\s*/,'');}
         else{cur+=tok;}
       });
       if(cur.trim())parts.push(cur.trim());
-      if(parts.length>1)return parts.filter(p=>p.length>20);
+      if(parts.length>1)return parts.filter(p=>p.trim().length>20).map(p=>p.trim());
     }
-    // Caso C: formato Apellido I.: Título (≥2 ocurrencias → inline refs)
+
+    // Caso C: formato Apellido I.: Título (≥2 ocurrencias)
     if((t.match(/[A-ZÁÉÍÓÚÑÜ][a-z]+\s+[A-Z]\.(?:[A-Z]\.)?\s*:/g)||[]).length>=2){
       const p=t.split(/\.\s+(?=[A-ZÁÉÍÓÚÑÜ][a-z]+\s+[A-Z]\.(?:[A-Z]\.)?\s*(?:[A-ZÁÉÍÓÚÑÜ][a-z]+\s+[A-Z]\.)?\s*:)/);
       if(p.length>1)return p.filter(s=>s.trim().length>20).map(s=>s.trim());
     }
+
+    // Caso D: múltiples refs unidas sin ISBN — split por ". Apellido [y Apellido]. "Título"
+    // Patrón: después de edición/ediciones/varias/punto → nuevo autor con título entre comillas
+    // Señales de fin de ref: "Edición.", "ediciones.", "YYYY.", ". [Apellido]"
+    const patronSepD=/[.]\s+(?=[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{1,15}(?:\s+[yY]\s+[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{1,15})?\s*[.,]\s*["«\u201c])/g;
+    const splitD=t.split(patronSepD).filter(s=>s.trim().length>20).map(s=>s.trim());
+    if(splitD.length>1)return splitD;
+
+    // Caso E: split por "edición. Autor" sin lookbehind
+    {
+      const partsE=[];let ultimo=0;
+      const reE=/(?:edici[oó]n\.?|ediciones\.?)\s+(?=[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{1,15}\s)/gi;
+      let mE;
+      while((mE=reE.exec(t))!==null){
+        const finPal=mE.index+mE[0].trimEnd().length;
+        partsE.push(t.slice(ultimo,finPal).trim());
+        ultimo=mE.index+mE[0].length;
+      }
+      if(partsE.length){partsE.push(t.slice(ultimo).trim());const fE=partsE.filter(s=>s.trim().length>20).map(s=>s.trim());if(fE.length>1)return fE;}
+    }
+
     return[t];
   }
 
@@ -1175,7 +1211,7 @@ function extraerYAcumular(texto,filename){
     if(refActual.length>30){
       const limpia=refActual.replace(/\s{2,}/g,' ').replace(/\s*\.+\s*\.+/g,'.').trim();
       splitRefMultiple(limpia).forEach(p=>{
-        if(p.length>20)ext_datos.push({archivo:filename,carrera,clave,nombre,tipo:tipoActual,ref:p,status:validarCalidad(p)});
+        if(p.trim().length>20)ext_datos.push({archivo:filename,carrera,clave,nombre,tipo:tipoActual,ref:p.trim(),status:validarCalidad(p.trim())});
       });
     }refActual='';
   };
@@ -1193,16 +1229,17 @@ function extraerYAcumular(texto,filename){
     const soloAnio=/^\d{4}\.?$/.test(lc);
     const esURL=/^https?:\/\/|^www\./i.test(lc);
 
+    // ── REGLA PRIORITARIA: ref sin terminal → siempre continuación ──────────
+    // Resuelve Cormen/Stein, Baase/Technology y cualquier título cortado a mitad
+    if(refSinTerminal(refActual)&&lc.length>3){
+      refActual+=' '+lc;
+      continue;
+    }
+
     if(/^[•●\-✔►▪]/.test(l)&&lc.length>5){
-      const refCompleta=/\b(19|20)\d{2}[.)"]?\s*$/.test(refActual);
-      const esProbableAutor=!refActual||refCompleta
-        ||/^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}[,;]/.test(lc)
-        ||/^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}\s*\(\d{4}/.test(lc)
-        ||/^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}\s+"/.test(lc)
-        ||/^[A-ZÁÉÍÓÚÑÜ][a-z]{1,3}\s+[A-ZÁÉÍÓÚÑÜ][a-z]+[,;]/.test(lc);
-      if(esProbableAutor&&!esEd){guardarRef();refActual=lc;}
-      else if(refActual){refActual+=' '+lc;}
-      else{refActual=lc;}
+      // Bullet + texto. Con la regla prioritaria ya no necesitamos esProbableAutor complejo.
+      // Si llegamos aquí, refActual ya terminó → siempre nueva ref si hay texto
+      guardarRef();refActual=lc;
 
     }else if(lc.length>5){
       if(soloAnio||esEd){if(refActual)refActual+=' '+lc;}
@@ -1212,7 +1249,6 @@ function extraerYAcumular(texto,filename){
         const tieneComa=/[,;]/.test(lc.slice(0,40));
         const refCompleta=/\b(19|20)\d{2}\.?\s*$/.test(refActual);
         const pareceAutor=tieneComa&&/^[A-ZÁÉÍÓÚÑÜ]/.test(lc);
-        // FIX imagen 1: requiere MAYÚSCULA inicial para no tratar "con Python..." como nueva ref
         const esNuevaRef=(tieneAnio&&tieneComa&&lc.length>35&&/^[A-ZÁÉÍÓÚÑÜ]/.test(lc))
                         ||(refCompleta&&pareceAutor);
         if(esNuevaRef&&!esEd){guardarRef();refActual=lc;}
