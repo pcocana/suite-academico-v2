@@ -1016,25 +1016,36 @@ function ext_procesarArchivos(files){
 // ── Utilidades globales compartidas entre ambos extractores ─────────────────
 function limpiarVineta(t){return String(t||'').replace(/^[\s•●\-\*✔✓►▪▸◆◉\uf0b7\uf0fc]+/,'').trim();}
 
-// esBibFin: detecta líneas que señalan el FIN de la sección bibliografía
-// Incluye secciones de recursos, texto de metodología, info institucional, etc.
-function esBibFin(rawLine){
+// esBibFinAbsoluto: parada DEFINITIVA — el documento cambió de sección bibliografía
+// Solo patrones que indican con certeza que no vendrán más referencias después
+function esBibFinAbsoluto(rawLine){
   const t=limpiarVineta(String(rawLine||''));
   const tn=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   return (
-    // Secciones romanas / encabezados post-bibliografía
     /^(?:VIII|IX|X{1,3})[\.\s]/i.test(t) ||
     /^SOBRE\s+INTEGRIDAD/i.test(t) ||
-    // Pie de página institucional
     tn.startsWith('academico responsable') ||
     tn.startsWith('unidad responsable') ||
     tn.startsWith('fecha de elaboracion') ||
     tn.startsWith('fecha de actualizacion') ||
     tn.startsWith('fecha de modificacion') ||
     tn.startsWith('acta consejo') ||
-    // Webgrafía
+    /^el\s+aprendizaje\b/i.test(t) ||    // sección metodología
+    /^los\s+materiales\s+de\s+apoyo/i.test(t) ||
+    /^avenida\b/i.test(tn) ||             // datos institucionales
+    /^lectura\s+de\s+art/i.test(tn) ||   // listas de revistas
+    /^articulos\s+y\s+otros\s+materiales/i.test(tn)
+  );
+}
+
+// esLineaNoRef: línea a SALTAR dentro de la sección bibliografía
+// Son recursos/materiales que NO son refs pero NO terminan la sección.
+// Usar continue/return (no break/enBiblio=false) para seguir buscando refs después.
+function esLineaNoRef(rawLine){
+  const t=limpiarVineta(String(rawLine||''));
+  const tn=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  return (
     tn.includes('webgraf') ||
-    // Secciones de recursos
     /(?:\d+\.\s*)?recursos\s+de\s+aprendizaje/i.test(tn) ||
     /^otros\s+materiales/i.test(tn) ||
     /^recursos\s+did/i.test(tn) ||
@@ -1042,19 +1053,13 @@ function esBibFin(rawLine){
     /^\d+\.\s+(?:plataforma|recursos?\s+did|materiales?\s+de\s+apoyo|aula\s+virtual|los\s+recursos)/i.test(tn) ||
     // Sub-ítems de recursos ("a. Videos", "b. PPT", "c. Guías")
     /^[a-f][.)]\s+(?:video|ppt|guia|data\s*show|proyector|pizarra|laboratorio|scopus|hipervincul|software)/i.test(tn) ||
-    // Sección de metodología / aprendizaje
-    /^el\s+aprendizaje\b/i.test(t) ||
-    /^los\s+materiales\s+de\s+apoyo/i.test(t) ||
-    /^estrategias\s+para\s+la\s+ejercitacion/i.test(tn) ||
-    // Datos de contacto / dirección institucional
-    /^avenida\b/i.test(tn) ||
-    /^telefono\b|^e-mail\b/i.test(tn) ||
-    // Lectura de artículos (lista de revistas)
-    /^lectura\s+de\s+art/i.test(tn) ||
-    // Artículos asignados por el profesor
-    /^articulos\s+y\s+otros\s+materiales/i.test(tn)
+    // Artículos asignados (recursos no-ref)
+    /^artículos\s+y\s+otros\s+materiales\s+bibliográficos\s+asignados/i.test(t)
   );
 }
+
+// Compatibilidad: esBibFin unifica ambas (para código que use la versión anterior)
+function esBibFin(rawLine){return esBibFinAbsoluto(rawLine)||esLineaNoRef(rawLine);}
 
 // ── splitRefMultiple: segunda pasada para bloques con múltiples refs ────────
 // Compartida por ambos extractores (PDF y DOCX)
@@ -1199,7 +1204,8 @@ function extraerYAcumularDocx(html,filename){
     if(!pt)return;
     if(esTituloBiblio(pt)){guardarRef();enBiblio=true;return;}
     if(!enBiblio)return;
-    if(esBibFin(pt)){guardarRef();enBiblio=false;enTipo=false;return;}
+    if(esBibFinAbsoluto(pt)){guardarRef();enBiblio=false;enTipo=false;return;}
+    if(esLineaNoRef(pt)){guardarRef();return;} // saltar línea sin terminar sección
     if(esTipoBasica(pt)){guardarRef();tipoActual='Básica';enTipo=true;return;}
     if(esTipoComp(pt)){guardarRef();tipoActual='Complementaria';enTipo=true;return;}
 
@@ -1251,8 +1257,9 @@ function extraerYAcumular(texto,filename){
   const esTipoComp=t=>/(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
   const limpiarL=t=>t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/,'').trim();
   const esSoloViñeta=t=>/^[•●►▪▸◆◉✔✓\-\s]+$/.test(t);
-  // Usa la función global esBibFin (cubre más patrones que la anterior)
-  const esFin=t=>esBibFin(t);
+  // esFin → parada definitiva; esNoRef → saltar sin terminar sección
+  const esFin=t=>esBibFinAbsoluto(t);
+  const esNoRef=t=>esLineaNoRef(t);
   // esLineaEditorial: editorial al INICIO de línea → siempre continuación, nunca nueva ref
   const esLineaEditorial=t=>/^(addison.?wesley|cambridge|oxford|elsevier|mcgraw.?hill|pearson|cengage|thomson|springer|wiley|routledge|prentice.?hall|university\s+press|editorial\s|ediciones?\s)/i.test(t.trim());
 
@@ -1283,6 +1290,7 @@ function extraerYAcumular(texto,filename){
     const lc=limpiarL(l);
 
     if(esFin(l)){guardarRef();break;}
+    if(esNoRef(l)){guardarRef();continue;} // saltar línea sin terminar sección
     if(esTipoBasica(l)){guardarRef();tipoActual='Básica';continue;}
     if(esTipoComp(l)){guardarRef();tipoActual='Complementaria';continue;}
     if(esSoloViñeta(l)){continue;}
