@@ -1143,53 +1143,78 @@ function extraerYAcumular(texto,filename){
   // esLineaEditorial: editorial al INICIO de línea → siempre continuación, nunca nueva ref
   const esLineaEditorial=t=>/^(addison.?wesley|cambridge|oxford|elsevier|mcgraw.?hill|pearson|cengage|thomson|springer|wiley|routledge|prentice.?hall|university\s+press|editorial\s|ediciones?\s)/i.test(t.trim());
 
+  // ── Segunda pasada: split de bloque con múltiples refs concatenadas ───────
+  function splitRefMultiple(t){
+    // Caso A: call numbers (005.133 MAR 2018) → separadores de refs-catálogo
+    if(/\(\d{3}\.\d+\s+\w+\s+\d{4}\)/.test(t)){
+      const p=t.split(/\s*\(\d{3}\.\d+\s+\w+\s+\d{4}\)\s*/).filter(s=>s.trim().length>20);
+      if(p.length>1)return p.map(s=>s.replace(/^\s*\.\s*/,'').trim());
+    }
+    // Caso B: múltiples ISBNs → split entre ISBN y siguiente autor
+    const isbnCount=(t.match(/\bISBN[\s:]\s*[\dX -]{10,17}/gi)||[]).length;
+    if(isbnCount>1){
+      const parts=[];let cur='';
+      t.split(/(\bISBN[\s:]\s*[\dX -]{10,17})/i).forEach(tok=>{
+        if(/^ISBN/i.test(tok)){cur+=tok;}
+        else if(cur&&/^\s*[A-ZÁÉÍÓÚÑÜ]/.test(tok)){parts.push(cur.trim());cur=tok;}
+        else{cur+=tok;}
+      });
+      if(cur.trim())parts.push(cur.trim());
+      if(parts.length>1)return parts.filter(p=>p.length>20);
+    }
+    // Caso C: formato Apellido I.: Título (≥2 ocurrencias → inline refs)
+    if((t.match(/[A-ZÁÉÍÓÚÑÜ][a-z]+\s+[A-Z]\.(?:[A-Z]\.)?\s*:/g)||[]).length>=2){
+      const p=t.split(/\.\s+(?=[A-ZÁÉÍÓÚÑÜ][a-z]+\s+[A-Z]\.(?:[A-Z]\.)?\s*(?:[A-ZÁÉÍÓÚÑÜ][a-z]+\s+[A-Z]\.)?\s*:)/);
+      if(p.length>1)return p.filter(s=>s.trim().length>20).map(s=>s.trim());
+    }
+    return[t];
+  }
+
   let tipoActual='Básica',refActual='';
   const guardarRef=()=>{
     if(refActual.length>30){
       const limpia=refActual.replace(/\s{2,}/g,' ').replace(/\s*\.+\s*\.+/g,'.').trim();
-      ext_datos.push({archivo:filename,carrera,clave,nombre,tipo:tipoActual,ref:limpia,status:validarCalidad(limpia)});
+      splitRefMultiple(limpia).forEach(p=>{
+        if(p.length>20)ext_datos.push({archivo:filename,carrera,clave,nombre,tipo:tipoActual,ref:p,status:validarCalidad(p)});
+      });
     }refActual='';
   };
 
   for(let i=idxBiblio+1;i<lineas.length;i++){
     const l=lineas[i];
-    const lc=limpiarL(l);                          // texto sin viñeta al inicio
+    const lc=limpiarL(l);
 
     if(esFin(l)){guardarRef();break;}
     if(esTipoBasica(l)){guardarRef();tipoActual='Básica';continue;}
     if(esTipoComp(l)){guardarRef();tipoActual='Complementaria';continue;}
-    if(esSoloViñeta(l)){continue;}                 // bullet solitario: ruido entre fragmentos
+    if(esSoloViñeta(l)){continue;}
 
     const esEd=esLineaEditorial(lc);
     const soloAnio=/^\d{4}\.?$/.test(lc);
     const esURL=/^https?:\/\/|^www\./i.test(lc);
 
     if(/^[•●\-✔►▪]/.test(l)&&lc.length>5){
-      // Bullet + texto: distinguir nueva ref vs. continuación de título partido
-      // La ref previa ya cerró (termina en año) → cualquier nueva línea es nueva ref
       const refCompleta=/\b(19|20)\d{2}[.)"]?\s*$/.test(refActual);
-      const esProbableAutor=!refActual   // sin ref en curso → siempre empezar
-        ||refCompleta                    // ref anterior ya cerrada con año → nueva
-        ||/^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}[,;]/.test(lc)          // Apellido, → "Castells,"
-        ||/^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}\s*\(\d{4}/.test(lc)    // Apellido (YYYY → "Hampton (1996"
-        ||/^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}\s+"/.test(lc)           // Apellido "Título → "Johansen ""
-        ||/^[A-ZÁÉÍÓÚÑÜ][a-z]{1,3}\s+[A-ZÁÉÍÓÚÑÜ][a-z]+[,;]/.test(lc); // De Carlos, (conector corto)
+      const esProbableAutor=!refActual||refCompleta
+        ||/^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}[,;]/.test(lc)
+        ||/^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}\s*\(\d{4}/.test(lc)
+        ||/^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}\s+"/.test(lc)
+        ||/^[A-ZÁÉÍÓÚÑÜ][a-z]{1,3}\s+[A-ZÁÉÍÓÚÑÜ][a-z]+[,;]/.test(lc);
       if(esProbableAutor&&!esEd){guardarRef();refActual=lc;}
       else if(refActual){refActual+=' '+lc;}
       else{refActual=lc;}
 
-    } else if(lc.length>5){
-      // Sin bullet: año suelto / editorial / URL → siempre continuación
+    }else if(lc.length>5){
       if(soloAnio||esEd){if(refActual)refActual+=' '+lc;}
       else if(esURL){if(refActual)refActual+=' '+lc;else refActual=lc;}
       else{
-        // Texto libre: nueva ref si tiene año+coma en zona inicial
-        // O si la ref actual ya terminó (termina en año) y esta línea parece inicio de autor
         const tieneAnio=/\b(19|20)\d{2}\b/.test(lc.slice(0,80));
         const tieneComa=/[,;]/.test(lc.slice(0,40));
-        const refCompleta=/\b(19|20)\d{2}\.?\s*$/.test(refActual);  // ref previa cierra en año
+        const refCompleta=/\b(19|20)\d{2}\.?\s*$/.test(refActual);
         const pareceAutor=tieneComa&&/^[A-ZÁÉÍÓÚÑÜ]/.test(lc);
-        const esNuevaRef=(tieneAnio&&tieneComa&&lc.length>35)||(refCompleta&&pareceAutor);
+        // FIX imagen 1: requiere MAYÚSCULA inicial para no tratar "con Python..." como nueva ref
+        const esNuevaRef=(tieneAnio&&tieneComa&&lc.length>35&&/^[A-ZÁÉÍÓÚÑÜ]/.test(lc))
+                        ||(refCompleta&&pareceAutor);
         if(esNuevaRef&&!esEd){guardarRef();refActual=lc;}
         else if(refActual){refActual+=' '+lc;}
         else{refActual=lc;}
