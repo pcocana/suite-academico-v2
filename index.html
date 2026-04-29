@@ -904,13 +904,19 @@ function ext_updateContador(){
     const ic  =a.estado==='ok'?'✅':a.estado==='sinrefs'?'⚠️':a.estado==='error'?'❌':'⏳';
     const col =a.estado==='ok'?'#d1fae5':a.estado==='sinrefs'?'#fef9c3':a.estado==='error'?'#fee2e2':'#f1f5f9';
     const bc  =a.estado==='ok'?'#a7f3d0':a.estado==='sinrefs'?'#fde68a':a.estado==='error'?'#fca5a5':'#e2e8f0';
-    const info=a.estado==='ok'?a.refs+' ref'+(a.refs!==1?'s':''):a.estado==='sinrefs'?'Sin bibliografía detectada':a.estado==='error'?a.msg:'Procesando...';
+    // Buscar sigla detectada para este archivo
+    const refsDeEsteArchivo=ext_datos.filter(d=>d.archivo===a.nombre);
+    const siglaDetectada=refsDeEsteArchivo.length?refsDeEsteArchivo[0].clave:'';
+    const sinSigla=refsDeEsteArchivo.length>0&&(!siglaDetectada||siglaDetectada==='—');
+    const infoBase=a.estado==='ok'?a.refs+' ref'+(a.refs!==1?'s':''):a.estado==='sinrefs'?'Sin bibliografía detectada':a.estado==='error'?a.msg:'Procesando...';
+    const infoSigla=siglaDetectada&&siglaDetectada!=='—'?` · <strong>${siglaDetectada}</strong>`:(sinSigla?' · <span style="color:#c2410c;font-weight:700;">⚠ sin sigla</span>':'');
     const infoCol=a.estado==='ok'?'#065f46':a.estado==='sinrefs'?'#92400e':a.estado==='error'?'#991b1b':'#64748b';
-    return`<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border);background:${col};">
+    const rowBg=sinSigla?'#fff7ed':col;
+    return`<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border);background:${rowBg};">
       <span style="font-size:15px;">${ic}</span>
       <div style="flex:1;min-width:0;">
         <div style="font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${a.nombre}">${a.nombre}</div>
-        <div style="font-size:11px;color:${infoCol};">${info}</div>
+        <div style="font-size:11px;color:${infoCol};">${infoBase}${infoSigla}</div>
       </div>
       <span style="font-size:10px;padding:2px 8px;border-radius:12px;border:1px solid ${bc};color:${infoCol};white-space:nowrap;font-family:'DM Mono',monospace;">${a.tipo||''}</span>
     </div>`;
@@ -1073,13 +1079,19 @@ function extraerYAcumularDocx(html,filename){
     .filter(it=>it.text.length>0);
 
   const parrafos=items.map(it=>it.text);
-  let carrera='',clave='',nombre='';
+  let carrera='',nombre='';
+  // PRIMERO: sigla del nombre del archivo (más confiable que el contenido del PDF)
+  const mfDocx=filename.match(/(?:^|[^A-Za-z])([A-Z]{2,6})\s*[-_]?\s*(\d{3,5})/);
+  let clave=mfDocx?(mfDocx[1]+' '+mfDocx[2]).toUpperCase():'';
+  // LUEGO: contenido del documento solo llena nombre y carrera (y sigla si filename no la tenía)
   [...filasTabla,...parrafos].forEach(p=>{
     if(!clave){const m=p.match(/(?:Sigla|Código|Clave)[\s:\t,]+([A-Z]{2,6}\s*\d{3,5})/i);if(m)clave=m[1].trim();}
     if(!nombre){const m=p.match(/^Nombre\s+(?:de\s+la\s+)?Asignatura[\s:\t]+(.+)/i)||p.match(/^Nombre\s+del?\s+Curso[\s:\t]+(.+)/i);if(m)nombre=m[1].trim().substring(0,100);}
     if(!carrera){const m=p.match(/^Carrera[\s:\t]+(.+)/i);if(m)carrera=m[1].trim().substring(0,60);}
   });
   if(!nombre)nombre=filename.replace(/\.(pdf|docx)$/i,'').replace(/[-_]/g,' ').trim();
+  // Si no se detectó nada, guardar el archivo fuente para trazabilidad
+  const archivoFuente=filename;
 
   let enBiblio=false,tipoActual='Básica',enTipo=false;
   const limpiarViñeta=t=>t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/,'').trim();
@@ -1121,7 +1133,7 @@ function extraerYAcumularDocx(html,filename){
       const limpia=refActual.replace(/\s{2,}/g,' ').replace(/\s*\.+\s*\.+/g,'.').trim();
       // Aplicar la misma segunda pasada que el extractor PDF
       (typeof splitRefMultiple==='function'?splitRefMultiple(limpia):[limpia]).forEach(p=>{
-        if(p.trim().length>20)ext_datos.push({archivo:filename,carrera,clave,nombre,tipo:tipoActual,ref:p.trim(),status:validarCalidad(p.trim())});
+        if(p.trim().length>20)ext_datos.push({archivo:archivoFuente||filename,carrera,clave,nombre,tipo:tipoActual,ref:p.trim(),status:validarCalidad(p.trim())});
       });
     }
     refActual='';
@@ -1154,14 +1166,18 @@ function extraerYAcumular(texto,filename){
   // Normalizar viñetas Wingdings/PUA a bullet estándar para simplificar el parsing
   texto=texto.replace(/[\uf0b7\uf0fc\uf076\uf0d8\uf0a7\uf0de\ue000-\uf8ff]/g,'•');
   const lineas=texto.split('\n').map(l=>l.trim().replace(/\s{2,}/g,' ')).filter(l=>l.length>0);
-  let carrera='',clave='',nombre='';
-  for(let i=0;i<lineas.length&&!(clave&&nombre);i++){
+  let carrera='',nombre='';
+  // PRIMERO: sigla del nombre del archivo (más confiable que el contenido del PDF)
+  const mfPdf=filename.match(/(?:^|[^A-Za-z])([A-Z]{2,6})\s*[-_]?\s*(\d{3,5})/);
+  let clave=mfPdf?(mfPdf[1]+' '+mfPdf[2]).toUpperCase():'';
+  // LUEGO: contenido solo llena nombre, carrera (y sigla si filename no la tenía)
+  for(let i=0;i<lineas.length&&!((!mfPdf&&clave)&&nombre);i++){
     const l=lineas[i];
     if(!clave){const m=l.match(/(?:Sigla|Código|Clave)[\s:\t,]+([A-Z]{2,6}\s*\d{3,5})/i);if(m)clave=m[1].trim();}
     if(!nombre){const m=l.match(/^Nombre\s+(?:de\s+la\s+)?Asignatura[\s:\t]+(.+)/i)||l.match(/^Nombre\s+del?\s+Curso[\s:\t]+(.+)/i);if(m)nombre=m[1].trim().substring(0,100);}
     if(!carrera){const m=l.match(/^Carrera[\s:\t]+(.+)/i);if(m)carrera=m[1].trim().substring(0,60);}
   }
-  if(!clave||!nombre){
+  if(!nombre){
     const siglaIdx=lineas.findIndex(l=>/^(?:Sigla|Código|Clave)\s*$/i.test(l));
     const nombreIdx=lineas.findIndex(l=>/^Nombre\s+(?:de\s+la\s+)?Asignatura\s*$/i.test(l)||/^Nombre\s+del?\s+Curso\s*$/i.test(l));
     if(siglaIdx>=0&&!clave){let claveIdx=-1;for(let j=siglaIdx+1;j<Math.min(siglaIdx+25,lineas.length);j++){if(/^[A-Z]{2,6}\s*\d{3,5}\s*$/.test(lineas[j])){clave=lineas[j].trim();claveIdx=j;break;}}
@@ -1169,6 +1185,9 @@ function extraerYAcumular(texto,filename){
     if(!nombre&&nombreIdx>=0){const next=lineas[nombreIdx+1]||'';if(next.length>2&&next.length<100&&!/^\d+$/.test(next)&&!/^[A-Z]{2,6}\d/.test(next))nombre=next.trim();}}
   }
   if(!nombre||nombre.length>100)nombre=filename.replace(/\.(pdf|docx)$/i,'').replace(/[-_]/g,' ').trim();
+  // Fallback: extraer sigla del nombre del archivo
+  if(!clave){const mf=filename.match(/\b([A-Z]{2,6})\s*[-_]?\s*(\d{3,5})\b/);if(mf)clave=(mf[1]+' '+mf[2]).toUpperCase();}
+  const archivoFuente=filename;
   let idxBiblio=-1;
   for(let i=0;i<lineas.length;i++){if(/^(?:VII\.?\s*)?(?:BIBLIOGRAFÍA|Referencias\s*Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)(?:\s+Y\s+.+)?$/i.test(lineas[i])){idxBiblio=i;break;}}
   if(idxBiblio===-1){for(let i=0;i<lineas.length;i++){if(/BIBLIOGRAFÍA|Referencias\s+Bibliográficas?/i.test(lineas[i])){idxBiblio=i;break;}}}
@@ -1213,7 +1232,7 @@ function extraerYAcumular(texto,filename){
     if(refActual.length>30){
       const limpia=refActual.replace(/\s{2,}/g,' ').replace(/\s*\.+\s*\.+/g,'.').trim();
       splitRefMultiple(limpia).forEach(p=>{
-        if(p.trim().length>20)ext_datos.push({archivo:filename,carrera,clave,nombre,tipo:tipoActual,ref:p.trim(),status:validarCalidad(p.trim())});
+        if(p.trim().length>20)ext_datos.push({archivo:archivoFuente||filename,carrera,clave,nombre,tipo:tipoActual,ref:p.trim(),status:validarCalidad(p.trim())});
       });
     }refActual='';
   };
@@ -1276,7 +1295,23 @@ function ext_updateView(){
   const grupos={};
   ext_datos.forEach((d,i)=>{const key=(d.clave||'—')+'||'+(d.nombre||'—');if(!grupos[key])grupos[key]={clave:d.clave,nombre:d.nombre,items:[]};grupos[key].items.push({...d,idx:i});});
   Object.values(grupos).forEach(grupo=>{
-    tbody.innerHTML+=`<tr style="background:#e9ecef;"><td></td><td colspan="4"><strong>${grupo.clave||'—'}</strong> · ${grupo.nombre||'—'} <span class="badge bg-secondary ms-2">${grupo.items.length} refs</span></td><td class="text-end"><button class="btn btn-outline-secondary btn-sm py-0 px-1" style="font-size:.75rem;" onclick="ext_editarAsignatura('${(grupo.clave+'||'+grupo.nombre).replace(/'/g,"\\'")}')">✏️ Editar</button></td></tr>`;
+    const sinSigla=!grupo.clave||grupo.clave==='—';
+    const archivosUnicos=[...new Set(grupo.items.map(d=>d.archivo||''))].filter(Boolean);
+    const archivoLabel=archivosUnicos.length===1?`<span style="font-size:.65rem;color:${sinSigla?'#c2410c':'var(--muted)'};margin-left:6px;font-family:'DM Mono',monospace;">📄 ${archivosUnicos[0]}</span>`:'';
+    const badgeColor=sinSigla?'background:#fed7aa;color:#9a3412;border:1px solid #fdba74;':'';
+    tbody.innerHTML+=`<tr style="background:${sinSigla?'#fff7ed':'#e9ecef'};">
+      <td></td>
+      <td colspan="4">
+        <span style="${badgeColor}padding:2px 8px;border-radius:4px;font-weight:700;">${grupo.clave||'⚠ SIN SIGLA'}</span>
+        <span style="margin-left:6px;font-size:.85rem;color:var(--text);">· ${grupo.nombre||'—'}</span>
+        ${archivoLabel}
+        <span class="badge bg-secondary ms-2">${grupo.items.length} refs</span>
+        ${sinSigla?'<span class="badge ms-1" style="background:#fee2e2;color:#991b1b;font-size:.6rem;">⚠ Editar antes de exportar</span>':''}
+      </td>
+      <td class="text-end">
+        <button class="btn btn-outline-secondary btn-sm py-0 px-1" style="font-size:.75rem;" onclick="ext_editarAsignatura('${(grupo.clave+'||'+grupo.nombre).replace(/'/g,"\\'")}')">✏️ Editar</button>
+      </td>
+    </tr>`;
     grupo.items.forEach(d=>{const cls=d.status.level==='success'?'row-ok':(d.status.level==='warning'?'row-warning':'row-error');tbody.innerHTML+=`<tr class="${cls}"><td class="text-center"><input type="checkbox" class="ref-check" data-idx="${d.idx}" onchange="ext_onCheckChange()"></td><td><small class="text-muted">${d.clave||'—'}</small></td><td><small>${d.nombre||'—'}</small></td><td><span class="badge bg-secondary">${d.tipo}</span></td><td><small>${d.ref}</small></td><td><small>${d.status.msg}</small></td></tr>`;});
   });
   const rl=document.getElementById('ext_resumenLista');rl.innerHTML='';
