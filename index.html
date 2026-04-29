@@ -186,19 +186,39 @@ body{background:var(--cream);font-family:'Inter','Segoe UI',sans-serif;color:var
          PESTAÑA 2 — EXTRACTOR MASIVO
     ════════════════════════════════════════ -->
     <div class="tab-pane fade" id="extractor-pane">
-      <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 style="font-family:'DM Sans',sans-serif;font-weight:700;color:#198754;">Extractor Masivo de Bibliografía</h3>
-        <div>
-          <span class="badge bg-secondary me-2" id="badgeArchivos">0 Archivos</span>
+        <div class="d-flex gap-2 align-items-center">
+          <span class="badge bg-secondary" id="badgeArchivos">0 Archivos</span>
           <span class="badge bg-primary" id="badgeRefs">0 Refs Totales</span>
         </div>
       </div>
+
+      <!-- Drop zone -->
       <div class="drop-zone" id="dropZone">
         <h5>📂 Arrastra tus archivos aquí</h5>
-        <p class="text-muted">Soporta PDF y Word (.docx). Mejorado para detectar sección de bibliografía en programas PUCV.</p>
+        <p class="text-muted mb-2">Soporta PDF y Word (.docx). Detecta sección de bibliografía en programas PUCV.</p>
         <input type="file" id="fileInput" multiple accept=".pdf,.docx" style="display:none">
-        <button class="btn btn-outline-primary btn-sm mt-2" onclick="document.getElementById('fileInput').click()">O selecciona archivos</button>
+        <button class="btn btn-outline-primary btn-sm" onclick="document.getElementById('fileInput').click()">O selecciona archivos</button>
       </div>
+
+      <!-- ── Panel contador de archivos ─────────────────────────────────── -->
+      <div id="ext_contadorPanel" style="display:none;margin-top:12px;border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <!-- Cabecera con totales -->
+        <div style="background:var(--navy);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:white;font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:700;">📋 Archivos cargados</span>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <span id="cnt_ok"    style="font-size:.72rem;font-family:'DM Mono',monospace;background:rgba(26,107,58,.9);color:#a7f3d0;padding:2px 10px;border-radius:20px;">✓ 0 OK</span>
+            <span id="cnt_warn"  style="font-size:.72rem;font-family:'DM Mono',monospace;background:rgba(146,64,14,.8);color:#fde68a;padding:2px 10px;border-radius:20px;">⚠ 0 sin refs</span>
+            <span id="cnt_err"   style="font-size:.72rem;font-family:'DM Mono',monospace;background:rgba(153,27,27,.8);color:#fca5a5;padding:2px 10px;border-radius:20px;">✕ 0 error</span>
+            <span id="cnt_total" style="font-size:.72rem;font-family:'DM Mono',monospace;color:rgba(255,255,255,.6);">0 / 0 total</span>
+          </div>
+        </div>
+        <!-- Lista de archivos -->
+        <div id="ext_archivosList" style="max-height:220px;overflow-y:auto;background:var(--paper);"></div>
+      </div>
+
+      <!-- Acciones -->
       <div class="d-flex justify-content-between mt-3 mb-2">
         <button class="btn btn-danger btn-sm" onclick="ext_reiniciarTodo()">🗑️ Limpiar Todo</button>
         <div class="d-flex gap-2">
@@ -206,10 +226,12 @@ body{background:var(--cream);font-family:'Inter','Segoe UI',sans-serif;color:var
           <button class="btn btn-success disabled" id="btnDescargarExt" onclick="ext_exportarExcel()">📥 Descargar Excel Unificado</button>
         </div>
       </div>
+
       <div id="ext_resumenAsignaturas" style="display:none;" class="mb-3">
-        <h6 class="text-muted mb-2">Asignaturas cargadas</h6>
+        <h6 class="text-muted mb-2">Asignaturas detectadas</h6>
         <div id="ext_resumenLista" class="d-flex flex-wrap gap-2"></div>
       </div>
+
       <div class="table-responsive mt-3" style="max-height:500px;overflow-y:auto;">
         <table class="table table-hover table-bordered small">
           <thead class="table-light sticky-top">
@@ -860,6 +882,40 @@ function gestor_exportarExcel(){
   }
 })();
 let ext_datos=[],ext_filesProcesados=new Set();
+// Registro de estado por archivo: {nombre, estado:'procesando'|'ok'|'sinrefs'|'error', refs, msg}
+let ext_archivos={};
+
+function ext_updateContador(){
+  const panel=document.getElementById('ext_contadorPanel');
+  const lista=document.getElementById('ext_archivosList');
+  const archivos=Object.values(ext_archivos);
+  if(!archivos.length){panel.style.display='none';return;}
+  panel.style.display='block';
+  const ok    =archivos.filter(a=>a.estado==='ok').length;
+  const warn  =archivos.filter(a=>a.estado==='sinrefs').length;
+  const err   =archivos.filter(a=>a.estado==='error').length;
+  const proc  =archivos.filter(a=>a.estado==='procesando').length;
+  const total =archivos.length;
+  document.getElementById('cnt_ok').textContent   ='✓ '+ok+' OK';
+  document.getElementById('cnt_warn').textContent ='⚠ '+warn+' sin refs';
+  document.getElementById('cnt_err').textContent  ='✕ '+err+' error';
+  document.getElementById('cnt_total').textContent=(ok+warn+err)+' / '+total+(proc?' ('+proc+' procesando…)':'');
+  lista.innerHTML=archivos.map(a=>{
+    const ic  =a.estado==='ok'?'✅':a.estado==='sinrefs'?'⚠️':a.estado==='error'?'❌':'⏳';
+    const col =a.estado==='ok'?'#d1fae5':a.estado==='sinrefs'?'#fef9c3':a.estado==='error'?'#fee2e2':'#f1f5f9';
+    const bc  =a.estado==='ok'?'#a7f3d0':a.estado==='sinrefs'?'#fde68a':a.estado==='error'?'#fca5a5':'#e2e8f0';
+    const info=a.estado==='ok'?a.refs+' ref'+(a.refs!==1?'s':''):a.estado==='sinrefs'?'Sin bibliografía detectada':a.estado==='error'?a.msg:'Procesando...';
+    const infoCol=a.estado==='ok'?'#065f46':a.estado==='sinrefs'?'#92400e':a.estado==='error'?'#991b1b':'#64748b';
+    return`<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border);background:${col};">
+      <span style="font-size:15px;">${ic}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${a.nombre}">${a.nombre}</div>
+        <div style="font-size:11px;color:${infoCol};">${info}</div>
+      </div>
+      <span style="font-size:10px;padding:2px 8px;border-radius:12px;border:1px solid ${bc};color:${infoCol};white-space:nowrap;font-family:'DM Mono',monospace;">${a.tipo||''}</span>
+    </div>`;
+  }).join('');
+}
 const dropZone=document.getElementById('dropZone'),fileInput=document.getElementById('fileInput');
 dropZone.addEventListener('dragover',(e)=>{e.preventDefault();dropZone.classList.add('drag');});
 dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag'));
@@ -871,12 +927,16 @@ function ext_procesarArchivos(files){
   Array.from(files).forEach(file=>{
     if(ext_filesProcesados.has(file.name))return;
     ext_filesProcesados.add(file.name);
+    const tipo=file.name.split('.').pop().toUpperCase();
+    // Registrar como "procesando"
+    ext_archivos[file.name]={nombre:file.name,estado:'procesando',refs:0,msg:'',tipo};
+    ext_updateContador();
     const reader=new FileReader(),ext=file.name.split('.').pop().toLowerCase();
     if(ext==='pdf'){
       reader.onerror=function(){
         ext_filesProcesados.delete(file.name);
-        document.getElementById('statusLog').innerText='Error leyendo: '+file.name;
-        alert('Error al leer el archivo PDF: '+file.name);
+        ext_archivos[file.name]={nombre:file.name,estado:'error',refs:0,msg:'Error al leer el archivo',tipo};
+        ext_updateContador();
       };
       reader.onload=async function(){
         document.getElementById('statusLog').innerText='Extrayendo texto de '+file.name+'...';
@@ -896,35 +956,52 @@ function ext_procesarArchivos(files){
             if(line.trim())lines.push(line.trim());
             fullText+=lines.join('\n')+'\n';
           }
+          const antesCount=ext_datos.length;
           extraerYAcumular(fullText,file.name);
+          const refsExtraidas=ext_datos.length-antesCount;
+          ext_archivos[file.name]={nombre:file.name,estado:refsExtraidas>0?'ok':'sinrefs',refs:refsExtraidas,msg:'',tipo};
+          ext_updateContador();
         }catch(e){
           ext_filesProcesados.delete(file.name);
-          const msg='Error en "'+file.name+'": '+(e.message||String(e));
-          document.getElementById('statusLog').innerText=msg;
-          console.error(msg,e);
-          alert(msg+'\n\nSi el PDF está protegido o escaneado (imagen), no puede procesarse.\nIntenta convertirlo a Word (.docx) primero.');
+          const msg=(e.message||String(e)).slice(0,60);
+          ext_archivos[file.name]={nombre:file.name,estado:'error',refs:0,msg,tipo};
+          ext_updateContador();
+          document.getElementById('statusLog').innerText='Error en '+file.name+': '+msg;
+          console.error(e);
+          alert('Error en "'+file.name+'": '+msg+'\n\nSi el PDF está protegido o escaneado (imagen), no puede procesarse.');
         }
       };
       reader.readAsArrayBuffer(file);
     }else if(ext==='docx'){
       reader.onerror=function(){
         ext_filesProcesados.delete(file.name);
-        alert('Error al leer el archivo Word: '+file.name);
+        ext_archivos[file.name]={nombre:file.name,estado:'error',refs:0,msg:'Error al leer el archivo',tipo};
+        ext_updateContador();
       };
       reader.onload=async function(){
         document.getElementById('statusLog').innerText='Extrayendo texto de '+file.name+'...';
-        try{const r=await mammoth.convertToHtml({arrayBuffer:this.result});extraerYAcumularDocx(r.value,file.name);}
-        catch(e){
+        try{
+          const r=await mammoth.convertToHtml({arrayBuffer:this.result});
+          const antesCount=ext_datos.length;
+          extraerYAcumularDocx(r.value,file.name);
+          const refsExtraidas=ext_datos.length-antesCount;
+          ext_archivos[file.name]={nombre:file.name,estado:refsExtraidas>0?'ok':'sinrefs',refs:refsExtraidas,msg:'',tipo};
+          ext_updateContador();
+        }catch(e){
           ext_filesProcesados.delete(file.name);
-          const msg='Error en "'+file.name+'": '+(e.message||String(e));
-          document.getElementById('statusLog').innerText=msg;
-          console.error(msg,e);
-          alert(msg);
+          const msg=(e.message||String(e)).slice(0,60);
+          ext_archivos[file.name]={nombre:file.name,estado:'error',refs:0,msg,tipo};
+          ext_updateContador();
+          document.getElementById('statusLog').innerText='Error en '+file.name+': '+msg;
+          console.error(e);
+          alert('Error en "'+file.name+'": '+msg);
         }
       };
       reader.readAsArrayBuffer(file);
     }else{
       ext_filesProcesados.delete(file.name);
+      delete ext_archivos[file.name];
+      ext_updateContador();
       alert('Formato no soportado: .'+ext+'\nSube archivos PDF o Word (.docx).');
     }
   });
@@ -1046,30 +1123,71 @@ function extraerYAcumular(texto,filename){
   const esTipoBasica=t=>/(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)/i.test(t);
   const esTipoComp=t=>/(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
   const limpiarL=t=>t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/,'').trim();
-  const esSoloViñeta=t=>/^[•●►▪▸◆◉✔✓\-\s]+$/.test(t); // línea que es SOLO el carácter de viñeta
-  const esFin=t=>{const tn=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();return /^(?:VIII|IX|X|XI)[\.\s]/i.test(t)||/^SOBRE\s+INTEGRIDAD/i.test(t)||tn.startsWith('academico responsable')||tn.startsWith('unidad responsable')||tn.startsWith('fecha de elaboracion')||tn.startsWith('fecha de actualizacion')||tn.startsWith('fecha de modificacion')||tn.includes('webgraf')||/(?:\d+\.\s*)?recursos\s+de\s+aprendizaje/i.test(tn);};
+  const esSoloViñeta=t=>/^[•●►▪▸◆◉✔✓\-\s]+$/.test(t);
+  // esFin verifica tanto la línea raw como la línea sin viñeta (por si el bullet precede la sección)
+  const esFin=t=>{
+    const tc=limpiarL(t).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const tn=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    return /^(?:VIII|IX|X{1,3})[\.\s]/i.test(limpiarL(t))
+      ||/^SOBRE\s+INTEGRIDAD/i.test(limpiarL(t))
+      ||tn.startsWith('academico responsable')||tc.startsWith('academico responsable')
+      ||tn.startsWith('unidad responsable')||tc.startsWith('unidad responsable')
+      ||tn.startsWith('fecha de elaboracion')||tc.startsWith('fecha de elaboracion')
+      ||tn.startsWith('fecha de actualizacion')||tc.startsWith('fecha de actualizacion')
+      ||tn.startsWith('fecha de modificacion')||tc.startsWith('fecha de modificacion')
+      ||tn.includes('webgraf')||tc.includes('webgraf')
+      ||/(?:\d+\.\s*)?recursos\s+de\s+aprendizaje/i.test(tc)
+      ||/^Otros\s+materiales/i.test(limpiarL(t))     // "• Otros materiales de apoyo:"
+      ||/^Recursos\s+Did/i.test(limpiarL(t));         // "• Recursos Didácticos"
+  };
+  // esLineaEditorial: editorial al INICIO de línea → siempre continuación, nunca nueva ref
+  const esLineaEditorial=t=>/^(addison.?wesley|cambridge|oxford|elsevier|mcgraw.?hill|pearson|cengage|thomson|springer|wiley|routledge|prentice.?hall|university\s+press|editorial\s|ediciones?\s)/i.test(t.trim());
+
   let tipoActual='Básica',refActual='';
-  const guardarRef=()=>{if(refActual.length>30){const limpia=refActual.replace(/\s{2,}/g,' ').replace(/\s*\.+\s*\.+/g,'.').trim();ext_datos.push({archivo:filename,carrera,clave,nombre,tipo:tipoActual,ref:limpia,status:validarCalidad(limpia)});}refActual='';};
+  const guardarRef=()=>{
+    if(refActual.length>30){
+      const limpia=refActual.replace(/\s{2,}/g,' ').replace(/\s*\.+\s*\.+/g,'.').trim();
+      ext_datos.push({archivo:filename,carrera,clave,nombre,tipo:tipoActual,ref:limpia,status:validarCalidad(limpia)});
+    }refActual='';
+  };
+
   for(let i=idxBiblio+1;i<lineas.length;i++){
     const l=lineas[i];
+    const lc=limpiarL(l);                          // texto sin viñeta al inicio
+
     if(esFin(l)){guardarRef();break;}
     if(esTipoBasica(l)){guardarRef();tipoActual='Básica';continue;}
     if(esTipoComp(l)){guardarRef();tipoActual='Complementaria';continue;}
-    // FIX: línea que es SOLO viñeta → ruido intercalado dentro de la misma ref, ignorar
-    if(esSoloViñeta(l)){continue;}
-    // Línea con viñeta al inicio + texto → inicio seguro de nueva ref
-    if(/^[•●✔►▪]/.test(l)||/^\d+\.\s+[A-ZÁÉÍÓÚÑÜ]/.test(l)){
-      const lc=limpiarL(l);if(lc.length>5){guardarRef();refActual=lc;}
-    } else {
-      const lc=l.trim();
-      // Nueva ref sin viñeta: empieza con mayúscula y tiene año (YYYY) en los primeros 80 chars
-      // Acepta apellidos compuestos: "Abarca Melo, N." / "Montolío, E." / "Van der Berg, K."
-      const esNuevaRef=lc.length>35
-        &&/^[A-ZÁÉÍÓÚÑÜ]/.test(lc)
-        &&/\b(19|20)\d{2}\b/.test(lc.slice(0,80))
-        &&/[,;]/.test(lc.slice(0,40));   // tiene coma en los primeros 40 chars (apellido, inicial)
-      if(esNuevaRef){guardarRef();refActual=lc;}
-      else if(lc.length>5&&refActual.length>0){refActual+=' '+lc;}
+    if(esSoloViñeta(l)){continue;}                 // bullet solitario: ruido entre fragmentos
+
+    const esEd=esLineaEditorial(lc);
+    const soloAnio=/^\d{4}\.?$/.test(lc);
+    const esURL=/^https?:\/\/|^www\./i.test(lc);
+
+    if(/^[•●\-✔►▪]/.test(l)&&lc.length>5){
+      // Bullet + texto: distinguir nueva ref vs. continuación de título partido
+      // Nueva ref: sin ref en curso OR coincide con Apellido, (coma inmediata tras apellido)
+      const esProbableAutor=!refActual||/^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}[,;]/.test(lc);
+      if(esProbableAutor&&!esEd){guardarRef();refActual=lc;}
+      else if(refActual){refActual+=' '+lc;}
+      else{refActual=lc;}
+
+    } else if(lc.length>5){
+      // Sin bullet: año suelto / editorial / URL → siempre continuación
+      if(soloAnio||esEd){if(refActual)refActual+=' '+lc;}
+      else if(esURL){if(refActual)refActual+=' '+lc;else refActual=lc;}
+      else{
+        // Texto libre: nueva ref si tiene año+coma en zona inicial
+        // O si la ref actual ya terminó (termina en año) y esta línea parece inicio de autor
+        const tieneAnio=/\b(19|20)\d{2}\b/.test(lc.slice(0,80));
+        const tieneComa=/[,;]/.test(lc.slice(0,40));
+        const refCompleta=/\b(19|20)\d{2}\.?\s*$/.test(refActual);  // ref previa cierra en año
+        const pareceAutor=tieneComa&&/^[A-ZÁÉÍÓÚÑÜ]/.test(lc);
+        const esNuevaRef=(tieneAnio&&tieneComa&&lc.length>35)||(refCompleta&&pareceAutor);
+        if(esNuevaRef&&!esEd){guardarRef();refActual=lc;}
+        else if(refActual){refActual+=' '+lc;}
+        else{refActual=lc;}
+      }
     }
   }
   guardarRef();ext_updateView();
@@ -1107,7 +1225,7 @@ function ext_onCheckChange(){const checks=document.querySelectorAll('.ref-check'
 function ext_toggleAll(checked){document.querySelectorAll('.ref-check').forEach(c=>c.checked=checked);ext_onCheckChange();}
 function ext_eliminarSeleccionadas(){const sel=[...document.querySelectorAll('.ref-check:checked')].map(c=>parseInt(c.dataset.idx));if(!sel.length)return;if(!confirm(`¿Eliminar ${sel.length} referencia(s)?`))return;const s=new Set(sel);ext_datos=ext_datos.filter((_,i)=>!s.has(i));ext_updateView();}
 function ext_editarAsignatura(key){const [ca,na]=key.split('||');const nc=prompt('Clave:',ca==='—'?'':ca);if(nc===null)return;const nn=prompt('Nombre:',na==='—'?'':na);if(nn===null)return;ext_datos.forEach(d=>{if((d.clave||'—')===ca&&(d.nombre||'—')===na){d.clave=nc.trim();d.nombre=nn.trim();}});ext_updateView();}
-function ext_reiniciarTodo(){if(!confirm("¿Borrar todo?"))return;ext_datos=[];ext_filesProcesados.clear();document.getElementById('tablaExtractorBody').innerHTML='<tr><td colspan="6" class="text-center text-muted">Esperando...</td></tr>';document.getElementById('badgeArchivos').innerText="0";document.getElementById('badgeRefs').innerText="0";document.getElementById('btnDescargarExt').classList.add('disabled');document.getElementById('btnEnviarGestor').classList.add('disabled');}
+function ext_reiniciarTodo(){if(!confirm("¿Borrar todo?"))return;ext_datos=[];ext_filesProcesados.clear();ext_archivos={};ext_updateContador();document.getElementById('tablaExtractorBody').innerHTML='<tr><td colspan="6" class="text-center text-muted">Esperando...</td></tr>';document.getElementById('badgeArchivos').innerText="0";document.getElementById('badgeRefs').innerText="0";document.getElementById('btnDescargarExt').classList.add('disabled');document.getElementById('btnEnviarGestor').classList.add('disabled');document.getElementById('statusLog').innerText='Listo para procesar.';}
 function ext_enviarAlGestor(){if(!ext_datos.length)return;let ag=0;ext_datos.forEach(d=>{if(!gestor_refs.some(r=>r.Referencia===d.ref)){gestor_refs.push({Carrera:d.carrera||'',Clave:d.clave||'',Asignatura:d.nombre||'',Tipo:d.tipo,Referencia:d.ref,ISBN:'',Observaciones:d.status.level!=='success'?d.status.msg:''});ag++;}});gestor_renderTabla();alert(`✅ ${ag} referencia(s) enviadas al Gestor.`);document.querySelector('[data-bs-target="#gestor-pane"]').click();}
 function ext_exportarExcel(){
   if(!ext_datos.length)return;
