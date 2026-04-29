@@ -844,7 +844,21 @@ function gestor_exportarExcel(){
      SCRIPT 2 — EXTRACTOR MASIVO
 ══════════════════════════════════════════════════════════ -->
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+// PDF.js — configurar worker con fallback para file:// y navegadores modernos
+(function(){
+  var workerUrl='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  try{
+    // En file:// el worker CORS falla — usar fake worker (más lento pero funcional)
+    if(window.location.protocol==='file:'){
+      pdfjsLib.GlobalWorkerOptions.workerSrc=workerUrl;
+      // Forzar modo sin worker separado si falla
+    } else {
+      pdfjsLib.GlobalWorkerOptions.workerSrc=workerUrl;
+    }
+  }catch(e){
+    pdfjsLib.GlobalWorkerOptions.workerSrc=workerUrl;
+  }
+})();
 let ext_datos=[],ext_filesProcesados=new Set();
 const dropZone=document.getElementById('dropZone'),fileInput=document.getElementById('fileInput');
 dropZone.addEventListener('dragover',(e)=>{e.preventDefault();dropZone.classList.add('drag');});
@@ -853,31 +867,66 @@ dropZone.addEventListener('drop',(e)=>{e.preventDefault();dropZone.classList.rem
 fileInput.addEventListener('change',(e)=>ext_procesarArchivos(e.target.files));
 
 function ext_procesarArchivos(files){
-  document.getElementById('statusLog').innerText=`Procesando ${files.length} archivos...`;
+  document.getElementById('statusLog').innerText=`Procesando ${files.length} archivo(s)...`;
   Array.from(files).forEach(file=>{
     if(ext_filesProcesados.has(file.name))return;
     ext_filesProcesados.add(file.name);
     const reader=new FileReader(),ext=file.name.split('.').pop().toLowerCase();
     if(ext==='pdf'){
+      reader.onerror=function(){
+        ext_filesProcesados.delete(file.name);
+        document.getElementById('statusLog').innerText='Error leyendo: '+file.name;
+        alert('Error al leer el archivo PDF: '+file.name);
+      };
       reader.onload=async function(){
+        document.getElementById('statusLog').innerText='Extrayendo texto de '+file.name+'...';
         try{
-          const pdf=await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+          const loadTask=pdfjsLib.getDocument({data:new Uint8Array(this.result),verbosity:0});
+          const pdf=await loadTask.promise;
           let fullText='';
           for(let i=1;i<=pdf.numPages;i++){
             const page=await pdf.getPage(i),tc=await page.getTextContent();
             let lastY=null,line='';const lines=[];
-            for(const item of tc.items){if(!item.transform||typeof item.str!=='string')continue;const y=Math.round(item.transform[5]);if(lastY!==null&&Math.abs(y-lastY)>3){if(line.trim())lines.push(line.trim());line='';}line+=item.str;lastY=y;}
-            if(line.trim())lines.push(line.trim());fullText+=lines.join('\n')+'\n';
+            for(const item of tc.items){
+              if(!item.transform||typeof item.str!=='string')continue;
+              const y=Math.round(item.transform[5]);
+              if(lastY!==null&&Math.abs(y-lastY)>3){if(line.trim())lines.push(line.trim());line='';}
+              line+=item.str;lastY=y;
+            }
+            if(line.trim())lines.push(line.trim());
+            fullText+=lines.join('\n')+'\n';
           }
           extraerYAcumular(fullText,file.name);
-        }catch(e){alert(`Error al leer "${file.name}": ${e.message}`);}
-      };reader.readAsArrayBuffer(file);
+        }catch(e){
+          ext_filesProcesados.delete(file.name);
+          const msg='Error en "'+file.name+'": '+(e.message||String(e));
+          document.getElementById('statusLog').innerText=msg;
+          console.error(msg,e);
+          alert(msg+'\n\nSi el PDF está protegido o escaneado (imagen), no puede procesarse.\nIntenta convertirlo a Word (.docx) primero.');
+        }
+      };
+      reader.readAsArrayBuffer(file);
     }else if(ext==='docx'){
+      reader.onerror=function(){
+        ext_filesProcesados.delete(file.name);
+        alert('Error al leer el archivo Word: '+file.name);
+      };
       reader.onload=async function(){
+        document.getElementById('statusLog').innerText='Extrayendo texto de '+file.name+'...';
         try{const r=await mammoth.convertToHtml({arrayBuffer:this.result});extraerYAcumularDocx(r.value,file.name);}
-        catch(e){alert(`Error al leer "${file.name}": ${e.message}`);}
-      };reader.readAsArrayBuffer(file);
-    }else{ext_filesProcesados.delete(file.name);alert(`Formato no soportado: .${ext}`);}
+        catch(e){
+          ext_filesProcesados.delete(file.name);
+          const msg='Error en "'+file.name+'": '+(e.message||String(e));
+          document.getElementById('statusLog').innerText=msg;
+          console.error(msg,e);
+          alert(msg);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }else{
+      ext_filesProcesados.delete(file.name);
+      alert('Formato no soportado: .'+ext+'\nSube archivos PDF o Word (.docx).');
+    }
   });
 }
 
@@ -972,6 +1021,8 @@ function extraerYAcumularDocx(html,filename){
 
 function extraerYAcumular(texto,filename){
   texto=texto.replace(/\r/g,'\n').replace(/\t/g,' ');
+  // Normalizar viñetas Wingdings/PUA a bullet estándar para simplificar el parsing
+  texto=texto.replace(/[\uf0b7\uf0fc\uf076\uf0d8\uf0a7\uf0de\ue000-\uf8ff]/g,'•');
   const lineas=texto.split('\n').map(l=>l.trim().replace(/\s{2,}/g,' ')).filter(l=>l.length>0);
   let carrera='',clave='',nombre='';
   for(let i=0;i<lineas.length&&!(clave&&nombre);i++){
@@ -995,14 +1046,31 @@ function extraerYAcumular(texto,filename){
   const esTipoBasica=t=>/(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)/i.test(t);
   const esTipoComp=t=>/(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
   const limpiarL=t=>t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/,'').trim();
+  const esSoloViñeta=t=>/^[•●►▪▸◆◉✔✓\-\s]+$/.test(t); // línea que es SOLO el carácter de viñeta
   const esFin=t=>{const tn=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();return /^(?:VIII|IX|X|XI)[\.\s]/i.test(t)||/^SOBRE\s+INTEGRIDAD/i.test(t)||tn.startsWith('academico responsable')||tn.startsWith('unidad responsable')||tn.startsWith('fecha de elaboracion')||tn.startsWith('fecha de actualizacion')||tn.startsWith('fecha de modificacion')||tn.includes('webgraf')||/(?:\d+\.\s*)?recursos\s+de\s+aprendizaje/i.test(tn);};
   let tipoActual='Básica',refActual='';
   const guardarRef=()=>{if(refActual.length>30){const limpia=refActual.replace(/\s{2,}/g,' ').replace(/\s*\.+\s*\.+/g,'.').trim();ext_datos.push({archivo:filename,carrera,clave,nombre,tipo:tipoActual,ref:limpia,status:validarCalidad(limpia)});}refActual='';};
   for(let i=idxBiblio+1;i<lineas.length;i++){
-    const l=lineas[i];if(esFin(l)){guardarRef();break;}
-    if(esTipoBasica(l)){guardarRef();tipoActual='Básica';continue;}if(esTipoComp(l)){guardarRef();tipoActual='Complementaria';continue;}
-    if(/^[•●\-]/.test(l)||/^\d+\.\s+[A-ZÁÉÍÓÚÑÜ]/.test(l)){if(refActual.length>0)guardarRef();const lc=limpiarL(l);if(lc.length>5)refActual=lc;}
-    else{const lc=l.trim();if(lc.length>5&&refActual.length>0)refActual+=' '+lc;}
+    const l=lineas[i];
+    if(esFin(l)){guardarRef();break;}
+    if(esTipoBasica(l)){guardarRef();tipoActual='Básica';continue;}
+    if(esTipoComp(l)){guardarRef();tipoActual='Complementaria';continue;}
+    // FIX: línea que es SOLO viñeta → ruido intercalado dentro de la misma ref, ignorar
+    if(esSoloViñeta(l)){continue;}
+    // Línea con viñeta al inicio + texto → inicio seguro de nueva ref
+    if(/^[•●✔►▪]/.test(l)||/^\d+\.\s+[A-ZÁÉÍÓÚÑÜ]/.test(l)){
+      const lc=limpiarL(l);if(lc.length>5){guardarRef();refActual=lc;}
+    } else {
+      const lc=l.trim();
+      // Nueva ref sin viñeta: empieza con mayúscula y tiene año (YYYY) en los primeros 80 chars
+      // Acepta apellidos compuestos: "Abarca Melo, N." / "Montolío, E." / "Van der Berg, K."
+      const esNuevaRef=lc.length>35
+        &&/^[A-ZÁÉÍÓÚÑÜ]/.test(lc)
+        &&/\b(19|20)\d{2}\b/.test(lc.slice(0,80))
+        &&/[,;]/.test(lc.slice(0,40));   // tiene coma en los primeros 40 chars (apellido, inicial)
+      if(esNuevaRef){guardarRef();refActual=lc;}
+      else if(lc.length>5&&refActual.length>0){refActual+=' '+lc;}
+    }
   }
   guardarRef();ext_updateView();
 }
