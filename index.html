@@ -246,11 +246,12 @@ body{background:var(--cream);font-family:'Inter','Segoe UI',sans-serif;color:var
           <thead class="table-light sticky-top">
             <tr>
               <th width="3%"><input type="checkbox" id="checkAll" onchange="ext_toggleAll(this.checked)"></th>
-              <th width="13%">Sigla</th>
-              <th width="19%">Asignatura</th>
-              <th width="9%">Tipo</th>
-              <th width="38%">Referencia</th>
-              <th width="18%">Validación</th>
+              <th width="11%">Sigla</th>
+              <th width="16%">Asignatura</th>
+              <th width="8%">Tipo</th>
+              <th width="36%">Referencia</th>
+              <th width="15%">Validación</th>
+              <th width="11%">Acciones</th>
             </tr>
           </thead>
           <tbody id="tablaExtractorBody"><tr><td colspan="6" class="text-center text-muted py-4">Esperando archivos...</td></tr></tbody>
@@ -603,6 +604,41 @@ body{background:var(--cream);font-family:'Inter','Segoe UI',sans-serif;color:var
         <div class="manual-step-box"><h5 style="color:var(--navy);" class="mb-2">📊 Verificador de Catálogo</h5><p>Carga el Excel de referencias y el catálogo KOHA. El algoritmo cruza automáticamente por autor + palabras clave del título, filtrando por año (el catálogo debe ser ≥ al año de la referencia). Suma ejemplares de todas las ediciones válidas del mismo título. Envía los "No Encontrados" al Cotizador con un clic.</p></div>
         <div class="manual-step-box"><h5 style="color:var(--gold);" class="mb-2">💰 Cotizador</h5><p>Busca precios en BookFinder, BuscaLibre, Amazon y MercadoLibre. Se puede usar de forma manual o recibir la cola de libros no encontrados desde el Verificador.</p></div>
         <div class="manual-step-box" style="border-left-color:#198754;"><h5 class="text-success mb-2">✅ Flujo recomendado</h5><p class="mb-1"><strong>Auditoría completa:</strong></p><p class="text-muted small">Extractor Masivo → Gestor → Verificador de Catálogo → Cotizador (para los no encontrados)</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal editar/partir referencia ── -->
+<div class="modal fade" id="editRefModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--navy);">
+        <h5 class="modal-title text-white" id="editRefModalTitle">✏️ Editar referencia</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Modo editar -->
+        <div id="editRefModoEditar">
+          <label class="form-label fw-bold">Referencia:</label>
+          <textarea id="editRefTexto" class="form-control" rows="4" style="font-size:13px;font-family:'Inter',sans-serif;"></textarea>
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-primary" onclick="ext_guardarEdicion()">💾 Guardar</button>
+            <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          </div>
+        </div>
+        <!-- Modo partir -->
+        <div id="editRefModoPartir" style="display:none;">
+          <p class="text-muted small mb-2">Edita las dos referencias resultantes. La línea de separación marca el corte.</p>
+          <label class="form-label fw-bold">Referencia 1:</label>
+          <textarea id="partirRef1" class="form-control mb-2" rows="3" style="font-size:13px;font-family:'Inter',sans-serif;"></textarea>
+          <label class="form-label fw-bold">Referencia 2:</label>
+          <textarea id="partirRef2" class="form-control" rows="3" style="font-size:13px;font-family:'Inter',sans-serif;"></textarea>
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-warning fw-bold" onclick="ext_guardarParticion()">✂️ Partir en dos</button>
+            <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1371,7 +1407,27 @@ function ext_updateView(){
         <button class="btn btn-outline-secondary btn-sm py-0 px-1" style="font-size:.75rem;" onclick="ext_editarAsignatura('${(grupo.clave+'||'+grupo.nombre).replace(/'/g,"\\'")}')">✏️ Editar</button>
       </td>
     </tr>`;
-    grupo.items.forEach(d=>{const cls=d.status.level==='success'?'row-ok':(d.status.level==='warning'?'row-warning':'row-error');tbody.innerHTML+=`<tr class="${cls}"><td class="text-center"><input type="checkbox" class="ref-check" data-idx="${d.idx}" onchange="ext_onCheckChange()"></td><td><small class="text-muted">${d.clave||'—'}</small></td><td><small>${d.nombre||'—'}</small></td><td><span class="badge bg-secondary">${d.tipo}</span></td><td><small>${d.ref}</small></td><td><small>${d.status.msg}</small></td></tr>`;});
+    grupo.items.forEach(d=>{
+      const cls=d.status.level==='success'?'row-ok':(d.status.level==='warning'?'row-warning':'row-error');
+      const tipoOpts=['Básica','Complementaria'].map(t=>`<option${d.tipo===t?' selected':''}>${t}</option>`).join('');
+      tbody.innerHTML+=`<tr class="${cls}" data-idx="${d.idx}">
+        <td class="text-center"><input type="checkbox" class="ref-check" data-idx="${d.idx}" onchange="ext_onCheckChange()"></td>
+        <td><small class="text-muted">${d.clave||'—'}</small></td>
+        <td><small>${d.nombre||'—'}</small></td>
+        <td>
+          <select class="form-select form-select-sm" style="font-size:.7rem;padding:1px 4px;" onchange="ext_cambiarTipo(${d.idx},this.value)">${tipoOpts}</select>
+        </td>
+        <td class="ref-cell" data-idx="${d.idx}" style="cursor:text;" onclick="ext_editarRef(${d.idx},this)">
+          <small class="ref-texto">${d.ref}</small>
+        </td>
+        <td><small>${d.status.msg}</small></td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-xs btn-outline-secondary btn-sm py-0 px-1 me-1" style="font-size:.7rem;" title="Editar referencia" onclick="ext_editarRef(${d.idx},this.closest('tr').querySelector('.ref-cell'))">✏️</button>
+          <button class="btn btn-xs btn-outline-warning btn-sm py-0 px-1 me-1" style="font-size:.7rem;" title="Partir en dos referencias" onclick="ext_partirRef(${d.idx})">✂️</button>
+          <button class="btn btn-xs btn-outline-danger btn-sm py-0 px-1" style="font-size:.7rem;" title="Eliminar esta referencia" onclick="ext_eliminarUna(${d.idx})">✕</button>
+        </td>
+      </tr>`;
+    });
   });
   const rl=document.getElementById('ext_resumenLista');rl.innerHTML='';
   gruposOrdenados.forEach(g=>{const bas=g.items.filter(d=>d.tipo!=='Complementaria').length,comp=g.items.filter(d=>d.tipo==='Complementaria').length;rl.innerHTML+=`<div class="card border-secondary" style="min-width:200px;max-width:260px;"><div class="card-body py-2 px-3"><div class="fw-bold small">${g.clave||'—'}</div><div class="text-muted small text-truncate">${g.nombre||'—'}</div><div class="mt-1 d-flex gap-2"><span class="badge bg-primary">${bas} Básica</span><span class="badge bg-secondary">${comp} Compl.</span></div></div></div>`;})
@@ -1918,7 +1974,82 @@ function disp_exportarExcel(){
   const datos=disp_items.map(i=>({'Título':i.titulo,'Autor':i.autor||'','Año':i.anio||'','Disponibilidad':et[i.estado],'URL Catálogo':OPAC_BASE+encodeURIComponent(disp_construirQuery(i.titulo,i.autor))}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(datos),'Disponibilidad PUCV');XLSX.writeFile(wb,'Disponibilidad_Bibliografica_PUCV.xlsx');
 }
-function disp_limpiar(){if(!confirm('¿Limpiar toda la lista?'))return;disp_items=[];disp_renderTabla();}
+// ── Edición inline de referencias ────────────────────────────────────────────
+let _editRefIdx = -1;
+let _editRefModal = null;
+
+function _getEditModal(){
+  if(!_editRefModal) _editRefModal = new bootstrap.Modal(document.getElementById('editRefModal'));
+  return _editRefModal;
+}
+
+function ext_editarRef(idx, celda){
+  _editRefIdx = idx;
+  const ref = ext_datos[idx].ref;
+  // Modo editar
+  document.getElementById('editRefModoEditar').style.display = 'block';
+  document.getElementById('editRefModoPartir').style.display = 'none';
+  document.getElementById('editRefModalTitle').textContent = '✏️ Editar referencia';
+  document.getElementById('editRefTexto').value = ref;
+  _getEditModal().show();
+  setTimeout(()=>document.getElementById('editRefTexto').focus(), 300);
+}
+
+function ext_guardarEdicion(){
+  const texto = document.getElementById('editRefTexto').value.trim();
+  if(!texto){ alert('La referencia no puede quedar vacía.'); return; }
+  ext_datos[_editRefIdx].ref = texto;
+  ext_datos[_editRefIdx].status = validarCalidad(texto);
+  _getEditModal().hide();
+  ext_updateView();
+}
+
+function ext_partirRef(idx){
+  _editRefIdx = idx;
+  const ref = ext_datos[idx].ref;
+  // Intentar partir automáticamente en el punto más probable
+  // Busca ". Apellido" o ". APELLIDO" como punto de corte sugerido
+  const corteSugerido = (() => {
+    const m = ref.match(/\.\s+(?=[A-ZÁÉÍÓÚÑÜ][A-Za-záéíóúñü]{1,}[\s,;.("])/);
+    if(m) return [ref.slice(0, m.index+1).trim(), ref.slice(m.index+m[0].length).trim()];
+    // Fallback: partir por la mitad
+    const mid = Math.floor(ref.length/2);
+    const espacio = ref.indexOf(' ', mid);
+    return [ref.slice(0, espacio).trim(), ref.slice(espacio+1).trim()];
+  })();
+  document.getElementById('editRefModoEditar').style.display = 'none';
+  document.getElementById('editRefModoPartir').style.display = 'block';
+  document.getElementById('editRefModalTitle').textContent = '✂️ Partir en dos referencias';
+  document.getElementById('partirRef1').value = corteSugerido[0];
+  document.getElementById('partirRef2').value = corteSugerido[1];
+  _getEditModal().show();
+  setTimeout(()=>document.getElementById('partirRef1').focus(), 300);
+}
+
+function ext_guardarParticion(){
+  const ref1 = document.getElementById('partirRef1').value.trim();
+  const ref2 = document.getElementById('partirRef2').value.trim();
+  if(!ref1||!ref2){ alert('Ambas referencias deben tener contenido.'); return; }
+  const original = ext_datos[_editRefIdx];
+  // Reemplazar el original con ref1 y añadir ref2 justo después
+  ext_datos[_editRefIdx] = { ...original, ref: ref1, status: validarCalidad(ref1) };
+  const nueva = { ...original, ref: ref2, status: validarCalidad(ref2) };
+  ext_datos.splice(_editRefIdx + 1, 0, nueva);
+  _getEditModal().hide();
+  ext_updateView();
+}
+
+function ext_cambiarTipo(idx, nuevoTipo){
+  ext_datos[idx].tipo = nuevoTipo;
+  // No redibuja todo — solo actualiza el dato
+}
+
+function ext_eliminarUna(idx){
+  if(!confirm('¿Eliminar esta referencia?')) return;
+  ext_datos.splice(idx, 1);
+  ext_updateView();
+}
+
 </script>
 </body>
 </html>
