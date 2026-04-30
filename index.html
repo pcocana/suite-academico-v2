@@ -221,9 +221,18 @@ body{background:var(--cream);font-family:'Inter','Segoe UI',sans-serif;color:var
       <!-- Acciones -->
       <div class="d-flex justify-content-between mt-3 mb-2">
         <button class="btn btn-danger btn-sm" onclick="ext_reiniciarTodo()">🗑️ Limpiar Todo</button>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 align-items-center flex-wrap">
           <button class="btn btn-outline-primary disabled" id="btnEnviarGestor" onclick="ext_enviarAlGestor()">➡️ Enviar al Gestor</button>
-          <button class="btn btn-success disabled" id="btnDescargarExt" onclick="ext_exportarExcel()">📥 Descargar Excel Unificado</button>
+          <button class="btn btn-success disabled" id="btnDescargarExt" onclick="ext_exportarExcel()">📥 Excel completo</button>
+          <button class="btn btn-primary disabled" id="btnDescargarSel" onclick="ext_exportarSeleccionadas()" style="display:none;">
+            📥 Excel asignaturas seleccionadas <span id="cntGruposSel" class="badge ms-1" style="background:rgba(255,255,255,.25);">0</span>
+          </button>
+        </div>
+      </div>
+      <!-- Instrucción selección de grupos -->
+      <div id="ext_instruccionSel" style="display:none;margin-bottom:8px;">
+        <div class="alert alert-info py-2 px-3 mb-0 small">
+          ☑ Marca las asignaturas <strong>en el orden</strong> en que quieres que aparezcan en el Excel. El número indica la posición asignada.
         </div>
       </div>
 
@@ -882,6 +891,9 @@ function gestor_exportarExcel(){
   }
 })();
 let ext_datos=[],ext_filesProcesados=new Set();
+// Orden de selección de archivos — garantiza que la tabla y el Excel
+// respetan el orden en que el usuario subió los archivos (1er semestre primero)
+let ext_ordenArchivos=[];
 // Registro de estado por archivo: {nombre, estado:'procesando'|'ok'|'sinrefs'|'error', refs, msg}
 let ext_archivos={};
 
@@ -923,9 +935,9 @@ function ext_updateContador(){
   }).join('');
 }
 const dropZone=document.getElementById('dropZone'),fileInput=document.getElementById('fileInput');
-dropZone.addEventListener('dragover',(e)=>{e.preventDefault();dropZone.classList.add('drag');});
+dropZone.addEventListener('dragover',(e)=>{if(_ext_dragSrcArchivo)return;e.preventDefault();dropZone.classList.add('drag');});
 dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag'));
-dropZone.addEventListener('drop',(e)=>{e.preventDefault();dropZone.classList.remove('drag');ext_procesarArchivos(e.dataTransfer.files);});
+dropZone.addEventListener('drop',(e)=>{if(_ext_dragSrcArchivo)return;e.preventDefault();dropZone.classList.remove('drag');ext_procesarArchivos(e.dataTransfer.files);});
 fileInput.addEventListener('change',(e)=>ext_procesarArchivos(e.target.files));
 
 function ext_procesarArchivos(files){
@@ -933,6 +945,8 @@ function ext_procesarArchivos(files){
   Array.from(files).forEach(file=>{
     if(ext_filesProcesados.has(file.name))return;
     ext_filesProcesados.add(file.name);
+    // Registrar orden de selección
+    if(!ext_ordenArchivos.includes(file.name))ext_ordenArchivos.push(file.name);
     const tipo=file.name.split('.').pop().toUpperCase();
     // Registrar como "procesando"
     ext_archivos[file.name]={nombre:file.name,estado:'procesando',refs:0,msg:'',tipo};
@@ -1102,7 +1116,7 @@ function extraerYAcumularDocx(html,filename){
   const esTipoComp=t=>/(?:\d+\.\s*)?(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
   const esRefEstricta=t=>{const tc=limpiarViñeta(t);return tc.length>35&&/\d{4}|s\.f\./.test(tc)&&/^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}[,;]/.test(tc);};
   const esRefLaxa=t=>{const tc=limpiarViñeta(t),tn=tc.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();if(tc.length<=35)return false;if(/^https?:\/\/|^www\.|^ftp:/i.test(tc))return false;if(/^\d+\.\s+[A-ZÁÉÍÓÚ]/.test(tc))return false;if(/^(?:Materiales|Cuaderno|Hojas|Data\s+show|Laboratorio|Aula|Apuntes|Sitio\s+web|Computador)/i.test(tc))return false;if(tn.startsWith('academico responsable')||tn.startsWith('fecha de ')||tn.includes('webgraf')||/^Otros\s+materiales/i.test(tc))return false;return true;};
-  const esFin=t=>{const tn=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();return /^(?:VIII|IX|X{1,3})[\.\s]/i.test(t)||/^SOBRE\s+INTEGRIDAD/i.test(t)||tn.startsWith('academico responsable')||tn.startsWith('unidad responsable')||tn.startsWith('fecha de elaboracion')||tn.startsWith('fecha de actualizacion')||tn.startsWith('fecha de modificacion')||tn.includes('webgraf')||/(?:\d+\.\s*)?recursos\s+de\s+aprendizaje/i.test(tn)||/Otros\s+materiales\s+de\s+apoyo/i.test(t);};
+  const esFin=t=>{const tn=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();const tl=limpiarViñeta(t);const tc=tl.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();return /^(?:VIII|IX|X{1,3})[\.\s]/i.test(tl)||/^SOBRE\s+INTEGRIDAD/i.test(tl)||tn.startsWith('academico responsable')||tc.startsWith('academico responsable')||tn.startsWith('unidad responsable')||tn.startsWith('fecha de elaboracion')||tn.startsWith('fecha de actualizacion')||tn.startsWith('fecha de modificacion')||tn.includes('webgraf')||/(?:\d+\.\s*)?recursos\s+de\s+aprendizaje/i.test(tn)||/^Otros\s+materiales/i.test(tl);};
 
   // FIX 3: lógica de continuación refinada
   // ── REGLA PRIORITARIA compartida con el extractor PDF ─────────────────────
@@ -1110,7 +1124,7 @@ function extraerYAcumularDocx(html,filename){
   // Resuelve: "Ediciones\nInstituto", "Edición\nAddison Wesley", "- K\nDavis", etc.
   const refSinTerminalDocx=r=>{
     if(!r||!r.trim())return false;
-    return!/[.!?")\]%\d]\s*$/.test(r.trim());
+    return!/[.!?")\]%\d\u201c\u201d\u2018\u2019\xbb]\s*$/.test(r.trim());
   };
 
   // esLineaEditorial: editorial al INICIO de línea
@@ -1198,7 +1212,8 @@ function extraerYAcumular(texto,filename){
   const esTipoComp=t=>/(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
   const limpiarL=t=>t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/,'').trim();
   const esSoloViñeta=t=>/^[•●►▪▸◆◉✔✓\-\s]+$/.test(t);
-  // esFin verifica tanto la línea raw como la línea sin viñeta (por si el bullet precede la sección)
+  // esFin: solo patrones que señalan cambio REAL de sección (igual que el original index.html)
+  // NO incluye "EL APRENDIZAJE" suelto — puede ser la 2ª línea del título partido
   const esFin=t=>{
     const tc=limpiarL(t).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     const tn=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -1211,25 +1226,25 @@ function extraerYAcumular(texto,filename){
       ||tn.startsWith('fecha de modificacion')||tc.startsWith('fecha de modificacion')
       ||tn.includes('webgraf')||tc.includes('webgraf')
       ||/(?:\d+\.\s*)?recursos\s+de\s+aprendizaje/i.test(tc)
-      ||/^Otros\s+materiales/i.test(limpiarL(t))     // "• Otros materiales de apoyo:"
-      ||/^Recursos\s+Did/i.test(limpiarL(t));         // "• Recursos Didácticos"
+      ||/^Otros\s+materiales/i.test(limpiarL(t))
+      // Pie de página institucional — nunca es referencia
+      ||/^avenida\b/i.test(tc)||/^telefono\b/i.test(tc)||/^e-mail\b/i.test(tc)
+      ||tc.startsWith('acta consejo');
   };
   // esLineaEditorial: editorial al INICIO de línea → siempre continuación, nunca nueva ref
   const esLineaEditorial=t=>/^(addison.?wesley|cambridge|oxford|elsevier|mcgraw.?hill|pearson|cengage|thomson|springer|wiley|routledge|prentice.?hall|university\s+press|editorial\s|ediciones?\s)/i.test(t.trim());
 
   // ── Regla terminal: ¿la ref actual está gramaticalmente incompleta? ────────
-  // Si termina sin puntuación terminal → la siguiente línea es SIEMPRE continuación.
-  // Esto resuelve Cormen/Stein y Baase/Technology sin excepción.
+  // FIX: incluir comillas tipográficas (curly quotes) además de ASCII
+  // sin esto, líneas terminadas en " o " se tratan como incompletas
   const refSinTerminal=r=>{
     if(!r||!r.trim())return false;
-    // Terminal OK: termina en . " ) ] - año - dígito
-    return!/[.!?")\]%\d]\s*$/.test(r.trim());
+    return!/[.!?")\]%\d\u201c\u201d\u2018\u2019\xbb]\s*$/.test(r.trim());
   };
 
-  // ── Segunda pasada: split de bloque con múltiples refs concatenadas ────────
-  // (definida a nivel global más abajo — ver función splitRefMultiple)
-
   let tipoActual='Básica',refActual='';
+  let soloViñetaPrevia=false; // FIX: bullet solo en línea propia → próxima línea = nueva ref
+
   const guardarRef=()=>{
     if(refActual.length>30){
       const limpia=refActual.replace(/\s{2,}/g,' ').replace(/\s*\.+\s*\.+/g,'.').trim();
@@ -1244,39 +1259,46 @@ function extraerYAcumular(texto,filename){
     const lc=limpiarL(l);
 
     if(esFin(l)){guardarRef();break;}
-    if(esTipoBasica(l)){guardarRef();tipoActual='Básica';continue;}
-    if(esTipoComp(l)){guardarRef();tipoActual='Complementaria';continue;}
-    if(esSoloViñeta(l)){continue;}
+    if(esTipoBasica(l)){guardarRef();tipoActual='Básica';soloViñetaPrevia=false;continue;}
+    if(esTipoComp(l)){guardarRef();tipoActual='Complementaria';soloViñetaPrevia=false;continue;}
+    if(esSoloViñeta(l)){soloViñetaPrevia=true;continue;}
 
     const esEd=esLineaEditorial(lc);
     const soloAnio=/^\d{4}\.?$/.test(lc);
     const esURL=/^https?:\/\/|^www\./i.test(lc);
 
-    // ── REGLA PRIORITARIA: ref sin terminal → siempre continuación ──────────
-    // Resuelve Cormen/Stein, Baase/Technology y cualquier título cortado a mitad
-    if(refSinTerminal(refActual)&&lc.length>3){
-      refActual+=' '+lc;
-      continue;
+    // REGLA PRIORITARIA: ref sin terminal → continuación
+    // (solo si la línea NO es inicio claro de nueva ref con bullet o viñeta previa)
+    const esBulletLine=/^[•●\-✔►▪]/.test(l)&&lc.length>5;
+    if(!esBulletLine&&!soloViñetaPrevia&&refSinTerminal(refActual)&&lc.length>3){
+      refActual+=' '+lc;continue;
     }
 
-    if(/^[•●\-✔►▪]/.test(l)&&lc.length>5){
-      // Bullet + texto. Con la regla prioritaria ya no necesitamos esProbableAutor complejo.
-      // Si llegamos aquí, refActual ya terminó → siempre nueva ref si hay texto
-      guardarRef();refActual=lc;
+    if(esBulletLine||(soloViñetaPrevia&&!refSinTerminal(refActual))){
+      // Bullet explícito, o bullet previo con ref COMPLETA → nueva ref
+      guardarRef();refActual=lc;soloViñetaPrevia=false;
+    }else if(soloViñetaPrevia&&refSinTerminal(refActual)){
+      // Bullet previo pero ref INCOMPLETA → continuación (refSinTerminal gana)
+      refActual+=' '+lc;soloViñetaPrevia=false;
 
     }else if(lc.length>5){
+      soloViñetaPrevia=false;
       if(soloAnio||esEd){if(refActual)refActual+=' '+lc;}
       else if(esURL){if(refActual)refActual+=' '+lc;else refActual=lc;}
       else{
         const tieneAnio=/\b(19|20)\d{2}\b/.test(lc.slice(0,80));
         const tieneComa=/[,;]/.test(lc.slice(0,40));
-        const refCompleta=/\b(19|20)\d{2}\.?\s*$/.test(refActual);
+        const refCompleta=/\b(19|20)\d{2}[.)"\u201d]?\s*$/.test(refActual);
         const pareceAutor=tieneComa&&/^[A-ZÁÉÍÓÚÑÜ]/.test(lc);
+        // "Apellido (YYYY" sin coma — Hampton (1996), Koontz (1999), Illanes (1997)
+        const apellidoParentesis=/^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}\s*\(\d{4}/.test(lc);
         const esNuevaRef=(tieneAnio&&tieneComa&&lc.length>35&&/^[A-ZÁÉÍÓÚÑÜ]/.test(lc))
-                        ||(refCompleta&&pareceAutor);
+                        ||(refCompleta&&pareceAutor)
+                        ||(refCompleta&&apellidoParentesis)
+                        ||(!refActual&&apellidoParentesis);
         if(esNuevaRef&&!esEd){guardarRef();refActual=lc;}
         else if(refActual){refActual+=' '+lc;}
-        else{refActual=lc;}
+        else if(tieneAnio||/^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}[,;(]/.test(lc)){refActual=lc;}
       }
     }
   }
@@ -1291,18 +1313,53 @@ function validarCalidad(ref){
   return{level:'success',msg:"OK"};
 }
 
+// Construye grupos ordenados según el orden de carga de archivos
+function ext_buildGruposOrdenados(){
+  // Primero agrupar por clave+nombre
+  const grupos={};
+  ext_datos.forEach((d,i)=>{
+    const key=(d.clave||'—')+'||'+(d.nombre||'—');
+    if(!grupos[key])grupos[key]={clave:d.clave,nombre:d.nombre,archivo:d.archivo,items:[]};
+    grupos[key].items.push({...d,idx:i});
+  });
+  // Ordenar según el primer archivo que aportó cada grupo
+  const orden=ext_ordenArchivos;
+  return Object.values(grupos).sort((a,b)=>{
+    const ia=orden.indexOf(a.archivo||'');
+    const ib=orden.indexOf(b.archivo||'');
+    if(ia===ib)return 0;
+    if(ia===-1)return 1;
+    if(ib===-1)return -1;
+    return ia-ib;
+  });
+}
+
 function ext_updateView(){
   const tbody=document.getElementById('tablaExtractorBody');
   if(ext_datos.length)tbody.innerHTML='';else{tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted">Esperando datos...</td></tr>';return;}
-  const grupos={};
-  ext_datos.forEach((d,i)=>{const key=(d.clave||'—')+'||'+(d.nombre||'—');if(!grupos[key])grupos[key]={clave:d.clave,nombre:d.nombre,items:[]};grupos[key].items.push({...d,idx:i});});
-  Object.values(grupos).forEach(grupo=>{
+  const gruposOrdenados=ext_buildGruposOrdenados();
+  gruposOrdenados.forEach((grupo,idx)=>{
     const sinSigla=!grupo.clave||grupo.clave==='—';
     const archivosUnicos=[...new Set(grupo.items.map(d=>d.archivo||''))].filter(Boolean);
-    const archivoLabel=archivosUnicos.length===1?`<span style="font-size:.65rem;color:${sinSigla?'#c2410c':'var(--muted)'};margin-left:6px;font-family:'DM Mono',monospace;">📄 ${archivosUnicos[0]}</span>`:'';
+    const archivoFuente=archivosUnicos[0]||'';
+    const archivoLabel=archivoFuente?`<span style="font-size:.65rem;color:${sinSigla?'#c2410c':'var(--muted)'};margin-left:6px;font-family:'DM Mono',monospace;">📄 ${archivoFuente}</span>`:'';
     const badgeColor=sinSigla?'background:#fed7aa;color:#9a3412;border:1px solid #fdba74;':'';
-    tbody.innerHTML+=`<tr style="background:${sinSigla?'#fff7ed':'#e9ecef'};">
-      <td></td>
+    const key=(grupo.clave||'—')+'||'+(grupo.nombre||'—');
+    const posicion=ext_gruposSeleccionados.indexOf(key);
+    const selIdx=posicion>=0?posicion+1:null;
+    tbody.innerHTML+=`<tr class="ext-grupo-row" data-key="${key.replace(/"/g,'&quot;')}" style="background:${sinSigla?'#fff7ed':'#e9ecef'};">
+      <td class="text-center">
+        <label style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;cursor:pointer;">
+          <input type="checkbox" class="grupo-check" data-key="${key.replace(/"/g,'&quot;')}"
+            ${selIdx?'checked':''} onchange="ext_onGrupoCheck(this)" style="opacity:0;position:absolute;width:0;height:0;">
+          <span style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:4px;
+            border:2px solid ${selIdx?'var(--navy)':'var(--border)'};
+            background:${selIdx?'var(--navy)':'white'};
+            color:white;font-size:10px;font-weight:700;font-family:'DM Mono',monospace;transition:.15s;">
+            ${selIdx||''}
+          </span>
+        </label>
+      </td>
       <td colspan="4">
         <span style="${badgeColor}padding:2px 8px;border-radius:4px;font-weight:700;">${grupo.clave||'⚠ SIN SIGLA'}</span>
         <span style="margin-left:6px;font-size:.85rem;color:var(--text);">· ${grupo.nombre||'—'}</span>
@@ -1317,32 +1374,75 @@ function ext_updateView(){
     grupo.items.forEach(d=>{const cls=d.status.level==='success'?'row-ok':(d.status.level==='warning'?'row-warning':'row-error');tbody.innerHTML+=`<tr class="${cls}"><td class="text-center"><input type="checkbox" class="ref-check" data-idx="${d.idx}" onchange="ext_onCheckChange()"></td><td><small class="text-muted">${d.clave||'—'}</small></td><td><small>${d.nombre||'—'}</small></td><td><span class="badge bg-secondary">${d.tipo}</span></td><td><small>${d.ref}</small></td><td><small>${d.status.msg}</small></td></tr>`;});
   });
   const rl=document.getElementById('ext_resumenLista');rl.innerHTML='';
-  Object.values(grupos).forEach(g=>{const bas=g.items.filter(d=>d.tipo!=='Complementaria').length,comp=g.items.filter(d=>d.tipo==='Complementaria').length;rl.innerHTML+=`<div class="card border-secondary" style="min-width:200px;max-width:260px;"><div class="card-body py-2 px-3"><div class="fw-bold small">${g.clave||'—'}</div><div class="text-muted small text-truncate">${g.nombre||'—'}</div><div class="mt-1 d-flex gap-2"><span class="badge bg-primary">${bas} Básica</span><span class="badge bg-secondary">${comp} Compl.</span></div></div></div>`;});
+  gruposOrdenados.forEach(g=>{const bas=g.items.filter(d=>d.tipo!=='Complementaria').length,comp=g.items.filter(d=>d.tipo==='Complementaria').length;rl.innerHTML+=`<div class="card border-secondary" style="min-width:200px;max-width:260px;"><div class="card-body py-2 px-3"><div class="fw-bold small">${g.clave||'—'}</div><div class="text-muted small text-truncate">${g.nombre||'—'}</div><div class="mt-1 d-flex gap-2"><span class="badge bg-primary">${bas} Básica</span><span class="badge bg-secondary">${comp} Compl.</span></div></div></div>`;})
   document.getElementById('ext_resumenAsignaturas').style.display=ext_datos.length?'block':'none';
   document.getElementById('badgeArchivos').innerText=ext_filesProcesados.size+" Archivos";
   document.getElementById('badgeRefs').innerText=ext_datos.length+" Refs";
   document.getElementById('btnDescargarExt').classList.remove('disabled');
   document.getElementById('btnEnviarGestor').classList.remove('disabled');
-  document.getElementById('statusLog').innerText="Procesamiento completo. "+Object.keys(grupos).length+" asignatura(s).";
+  document.getElementById('statusLog').innerText="Procesamiento completo. "+gruposOrdenados.length+" asignatura(s). Selecciona las que quieres exportar.";
+  document.getElementById('ext_instruccionSel').style.display=gruposOrdenados.length>0?'block':'none';
   const ca=document.getElementById('checkAll');if(ca)ca.checked=false;
   document.getElementById('btnEliminarSel').style.display='none';
+}
+// ── Selección ordenada de asignaturas para exportar ──────────────────────────
+let ext_gruposSeleccionados=[];
+
+function ext_onGrupoCheck(chk){
+  const key=chk.dataset.key;
+  if(chk.checked){
+    if(!ext_gruposSeleccionados.includes(key))ext_gruposSeleccionados.push(key);
+  }else{
+    ext_gruposSeleccionados=ext_gruposSeleccionados.filter(k=>k!==key);
+  }
+  ext_updateGrupoSelUI();
+}
+function ext_updateGrupoSelUI(){
+  const n=ext_gruposSeleccionados.length;
+  const btn=document.getElementById('btnDescargarSel');
+  const cnt=document.getElementById('cntGruposSel');
+  if(n>0){btn.style.display='inline-block';btn.classList.remove('disabled');cnt.textContent=n;}
+  else{btn.style.display='none';}
+  document.querySelectorAll('.grupo-check').forEach(chk=>{
+    const pos=ext_gruposSeleccionados.indexOf(chk.dataset.key);
+    const span=chk.nextElementSibling;if(!span)return;
+    if(pos>=0){span.textContent=pos+1;span.style.background='var(--navy)';span.style.borderColor='var(--navy)';}
+    else{span.textContent='';span.style.background='white';span.style.borderColor='var(--border)';}
+  });
+}
+function ext_exportarSeleccionadas(){
+  if(!ext_gruposSeleccionados.length)return alert('Selecciona al menos una asignatura.');
+  const wb=XLSX.utils.book_new();
+  const carrera=ext_datos.find(d=>d.carrera)?.carrera||'';
+  const allGrupos={};
+  ext_buildGruposOrdenados().forEach(g=>{allGrupos[(g.clave||'—')+'||'+(g.nombre||'—')]=g;});
+  const grupos={};
+  ext_gruposSeleccionados.forEach(key=>{
+    const g=allGrupos[key];if(!g)return;
+    grupos[key]={clave:g.clave||'',asignatura:g.nombre||'',nombre:g.nombre||'',basica:[],complementaria:[]};
+    g.items.forEach(d=>{if(d.tipo==='Complementaria')grupos[key].complementaria.push(d);else grupos[key].basica.push(d);});
+  });
+  const ws=buildPlanillaWS(grupos,carrera);
+  XLSX.utils.book_append_sheet(wb,ws,'Bibliografías');
+  XLSX.writeFile(wb,'Seleccion_'+(carrera||'Bibliografía')+'.xlsx');
 }
 function ext_onCheckChange(){const checks=document.querySelectorAll('.ref-check'),sel=[...checks].filter(c=>c.checked).length;document.getElementById('btnEliminarSel').style.display=sel>0?'inline-block':'none';const ca=document.getElementById('checkAll');if(ca)ca.checked=sel===checks.length&&checks.length>0;}
 function ext_toggleAll(checked){document.querySelectorAll('.ref-check').forEach(c=>c.checked=checked);ext_onCheckChange();}
 function ext_eliminarSeleccionadas(){const sel=[...document.querySelectorAll('.ref-check:checked')].map(c=>parseInt(c.dataset.idx));if(!sel.length)return;if(!confirm(`¿Eliminar ${sel.length} referencia(s)?`))return;const s=new Set(sel);ext_datos=ext_datos.filter((_,i)=>!s.has(i));ext_updateView();}
 function ext_editarAsignatura(key){const [ca,na]=key.split('||');const nc=prompt('Clave:',ca==='—'?'':ca);if(nc===null)return;const nn=prompt('Nombre:',na==='—'?'':na);if(nn===null)return;ext_datos.forEach(d=>{if((d.clave||'—')===ca&&(d.nombre||'—')===na){d.clave=nc.trim();d.nombre=nn.trim();}});ext_updateView();}
-function ext_reiniciarTodo(){if(!confirm("¿Borrar todo?"))return;ext_datos=[];ext_filesProcesados.clear();ext_archivos={};ext_updateContador();document.getElementById('tablaExtractorBody').innerHTML='<tr><td colspan="6" class="text-center text-muted">Esperando...</td></tr>';document.getElementById('badgeArchivos').innerText="0";document.getElementById('badgeRefs').innerText="0";document.getElementById('btnDescargarExt').classList.add('disabled');document.getElementById('btnEnviarGestor').classList.add('disabled');document.getElementById('statusLog').innerText='Listo para procesar.';}
+function ext_reiniciarTodo(){if(!confirm("¿Borrar todo?"))return;ext_datos=[];ext_filesProcesados.clear();ext_archivos={};ext_ordenArchivos=[];ext_gruposSeleccionados=[];ext_updateContador();document.getElementById('tablaExtractorBody').innerHTML='<tr><td colspan="6" class="text-center text-muted">Esperando...</td></tr>';document.getElementById('badgeArchivos').innerText="0";document.getElementById('badgeRefs').innerText="0";document.getElementById('btnDescargarExt').classList.add('disabled');document.getElementById('btnEnviarGestor').classList.add('disabled');document.getElementById('statusLog').innerText='Listo para procesar.';}
 function ext_enviarAlGestor(){if(!ext_datos.length)return;let ag=0;ext_datos.forEach(d=>{if(!gestor_refs.some(r=>r.Referencia===d.ref)){gestor_refs.push({Carrera:d.carrera||'',Clave:d.clave||'',Asignatura:d.nombre||'',Tipo:d.tipo,Referencia:d.ref,ISBN:'',Observaciones:d.status.level!=='success'?d.status.msg:''});ag++;}});gestor_renderTabla();alert(`✅ ${ag} referencia(s) enviadas al Gestor.`);document.querySelector('[data-bs-target="#gestor-pane"]').click();}
 function ext_exportarExcel(){
   if(!ext_datos.length)return;
   const wb=XLSX.utils.book_new();
   const carrera=ext_datos.find(d=>d.carrera)?.carrera||'';
+  // Construir grupos en el orden de carga de archivos
+  const gruposOrd=ext_buildGruposOrdenados();
   const grupos={};
-  ext_datos.forEach(d=>{
-    const key=(d.clave||'')+'||'+(d.nombre||'');
-    if(!grupos[key])grupos[key]={clave:d.clave||'',asignatura:d.nombre||'',nombre:d.nombre||'',basica:[],complementaria:[]};
-    if(d.tipo==='Complementaria')grupos[key].complementaria.push(d);
-    else grupos[key].basica.push(d);
+  gruposOrd.forEach(g=>{
+    const key=(g.clave||'')+'||'+(g.nombre||'');
+    grupos[key]={clave:g.clave||'',asignatura:g.nombre||'',nombre:g.nombre||'',basica:[],complementaria:[]};
+    g.items.forEach(d=>{if(d.tipo==='Complementaria')grupos[key].complementaria.push(d);else grupos[key].basica.push(d);});
   });
   const ws=buildPlanillaWS(grupos,carrera);
   XLSX.utils.book_append_sheet(wb,ws,'Bibliografías');
