@@ -1451,7 +1451,7 @@ function ext_updateView(){
         <td>
           <select class="form-select form-select-sm" style="font-size:.7rem;padding:1px 4px;" onchange="ext_cambiarTipo(${d.idx},this.value)">${tipoOpts}</select>
         </td>
-        <td class="ref-cell" data-idx="${d.idx}" style="cursor:text;" onclick="ext_editarRef(${d.idx},this)">
+        <td class="ref-cell" data-idx="${d.idx}">
           <small class="ref-texto">${d.ref}</small>
         </td>
         <td><small>${d.status.msg}</small></td>
