@@ -89,6 +89,12 @@ body{background:var(--cream);font-family:'Inter','Segoe UI',sans-serif;color:var
 .manual-step-box{background:var(--cream);border-left:4px solid var(--navy);padding:14px 16px;margin-bottom:12px;border-radius:0 var(--r) var(--r) 0;}
 .manual-step-box h5{font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:700;}
 .step-number{font-weight:700;color:var(--navy);margin-right:4px;}
+/* Bandeja */
+.bandeja-source-badge{display:inline-block;font-size:.6rem;font-family:'DM Mono',monospace;padding:1px 7px;border-radius:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+.bandeja-source-ext{background:#d1fae5;color:#065f46;}
+.bandeja-source-imp{background:#ede9fe;color:#4c1d95;}
+.bandeja-source-manual{background:#dbeafe;color:#1e40af;}
+.bandeja-row-editing td{background:#fffbea !important;}
 </style>
 </head>
 <body>
@@ -101,11 +107,11 @@ body{background:var(--cream);font-family:'Inter','Segoe UI',sans-serif;color:var
       <div class="app-header-logo">📚</div>
       <div>
         <h1 class="app-title">Suite Académica · Biblioteca PUCV</h1>
-        <div class="app-subtitle">Gestor APA 7 · Verificador de Catálogo · Cotizador</div>
+        <div class="app-subtitle">Gestor APA 7 · Extractor Masivo · Bandeja de Clasificación</div>
       </div>
     </div>
     <div class="d-flex align-items-center gap-2">
-      <span class="ver-badge">v5.0</span>
+      <span class="ver-badge">v6.0</span>
       <button class="btn btn-outline-light btn-sm" style="border-color:rgba(255,255,255,.35);color:rgba(255,255,255,.85);font-size:12px;padding:5px 13px;border-radius:20px;" data-bs-toggle="modal" data-bs-target="#manualModal">📖 Manual</button>
     </div>
   </div>
@@ -115,9 +121,7 @@ body{background:var(--cream);font-family:'Inter','Segoe UI',sans-serif;color:var
     <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#gestor-pane">🛠️ Gestor APA 7</button></li>
     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#extractor-pane">📂 Extractor Masivo</button></li>
     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#importador-pane">📚 Importador Zotero</button></li>
-    <li class="nav-item"><button class="nav-link" id="verificador-tab" data-bs-toggle="tab" data-bs-target="#verificador-pane">📊 Verificador de Catálogo</button></li>
-    <li class="nav-item"><button class="nav-link" id="cotizador-tab" data-bs-toggle="tab" data-bs-target="#cotizador-pane">💰 Cotizador</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#disponibilidad-pane">🔍 Disponibilidad PUCV</button></li>
+    <li class="nav-item"><button class="nav-link" id="bandeja-tab" data-bs-toggle="tab" data-bs-target="#bandeja-pane">🗂️ Bandeja de Clasificación <span id="bandeja_badge_nav" class="badge ms-1" style="background:var(--gold);color:var(--navy);display:none;">0</span></button></li>
   </ul>
 
   <div class="tab-content">
@@ -169,7 +173,10 @@ body{background:var(--cream);font-family:'Inter','Segoe UI',sans-serif;color:var
           </select>
         </div>
         <div id="camposDinamicos" class="row g-3 mt-1"></div>
-        <div class="col-12 mt-3"><button class="btn btn-primary w-100" onclick="gestor_agregarReferencia()">+ Agregar a la Lista</button></div>
+        <div class="col-12 mt-3 d-flex gap-2">
+          <button class="btn btn-primary flex-grow-1" onclick="gestor_agregarReferencia()">+ Agregar a la Lista</button>
+          <button class="btn btn-outline-secondary" onclick="gestor_enviarABandeja()" title="Agrega a la Bandeja de Clasificación para asignar asignatura primero">🗂️ → Bandeja</button>
+        </div>
       </div>
       <div class="mt-4">
         <h4 style="font-family:'DM Sans',sans-serif;font-weight:700;">Referencias Cargadas</h4>
@@ -223,7 +230,7 @@ body{background:var(--cream);font-family:'Inter','Segoe UI',sans-serif;color:var
       <div class="d-flex justify-content-between mt-3 mb-2">
         <button class="btn btn-danger btn-sm" onclick="ext_reiniciarTodo()">🗑️ Limpiar Todo</button>
         <div class="d-flex gap-2 align-items-center flex-wrap">
-          <button class="btn btn-outline-primary disabled" id="btnEnviarGestor" onclick="ext_enviarAlGestor()">➡️ Enviar al Gestor</button>
+          <button class="btn btn-outline-primary disabled" id="btnEnviarGestor" onclick="ext_enviarAlGestor()">🗂️ Enviar a Bandeja</button>
           <button class="btn btn-success disabled" id="btnDescargarExt" onclick="ext_exportarExcel()">📥 Excel completo</button>
           <button class="btn btn-primary disabled" id="btnDescargarSel" onclick="ext_exportarSeleccionadas()" style="display:none;">
             📥 Excel asignaturas seleccionadas <span id="cntGruposSel" class="badge ms-1" style="background:rgba(255,255,255,.25);">0</span>
@@ -300,7 +307,7 @@ body{background:var(--cream);font-family:'Inter','Segoe UI',sans-serif;color:var
           </div>
           <div class="d-flex gap-2">
             <button class="btn btn-outline-primary btn-sm" onclick="imp_copiarTodas()">📋 Copiar todas</button>
-            <button class="btn btn-primary btn-sm" onclick="imp_enviarAlGestor()">➡️ Enviar seleccionadas</button>
+            <button class="btn btn-primary btn-sm" onclick="imp_enviarAlGestor()">🗂️ Enviar a Bandeja</button>
           </div>
         </div>
         <div class="table-responsive">
@@ -313,281 +320,92 @@ body{background:var(--cream);font-family:'Inter','Segoe UI',sans-serif;color:var
     </div>
 
     <!-- ════════════════════════════════════════
-         PESTAÑA 4 — VERIFICADOR DE CATÁLOGO
+         PESTAÑA 4 — BANDEJA DE CLASIFICACIÓN
     ════════════════════════════════════════ -->
-    <div class="tab-pane fade" id="verificador-pane">
-      <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="tab-pane fade" id="bandeja-pane">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
-          <h3 class="mb-0" style="font-family:'DM Sans',sans-serif;font-weight:700;color:var(--navy);">📊 Verificador de Catálogo</h3>
-          <p class="text-muted small mb-0">Carga el Excel de referencias y el catálogo KOHA — el sistema cruza y puntúa automáticamente.</p>
+          <h3 class="mb-0" style="font-family:'DM Sans',sans-serif;font-weight:700;color:var(--navy);">🗂️ Bandeja de Clasificación</h3>
+          <p class="text-muted small mb-0">Revisa, edita y asigna asignatura a cada referencia antes de enviarla al Gestor final.</p>
+        </div>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+          <span class="badge bg-secondary" id="bandeja_badge_total">0 referencias</span>
+          <button class="btn btn-outline-danger btn-sm" onclick="bandeja_limpiarTodo()">🗑️ Vaciar bandeja</button>
+          <button class="btn btn-success" onclick="bandeja_enviarAlGestor()" id="bandeja_btnEnviar" disabled>✅ Enviar al Gestor</button>
         </div>
       </div>
 
-      <div id="v_alerts"></div>
-
-      <div class="row g-3 mb-3">
-        <!-- Instrucciones laterales -->
-        <div class="col-lg-3 order-lg-2">
-          <div class="v-instructions">
-            <div class="stitle">📖 Instrucciones</div>
-            <ul><li>Sube Excel de <strong>Referencias</strong></li><li>Sube Excel del <strong>Catálogo</strong></li><li>Selecciona las columnas</li><li>Presiona <strong>Procesar</strong></li><li>Descarga el resultado</li></ul>
-            <div class="stitle mt-3">🎨 Estados</div>
-            <ul><li><span style="color:#15803d">EN BIBLIOTECA</span> — con ejemplares</li><li><span style="color:#b91c1c">SIN STOCK</span> — existe, sin copias</li><li><span style="color:#c2410c">NO ENCONTRADO</span></li><li><span style="color:#1d4ed8">ARTÍCULO</span> — redirige Scholar</li></ul>
-            <div class="stitle mt-3">🔍 Algoritmo</div>
-            <ul><li>Extrae apellidos de la ref.</li><li>Aísla palabras clave del título</li><li>Puntúa por autor + título</li><li>Filtra por año ≥ ref.</li><li>Suma ejemplares de ediciones</li></ul>
-          </div>
-        </div>
-
-        <!-- Zona principal -->
-        <div class="col-lg-9 order-lg-1">
-          <!-- Drops -->
-          <div class="row g-3 mb-3">
-            <div class="col-md-6">
-              <div class="drop-zone text-center" id="v_dropRef" style="padding:24px 14px;">
-                <input type="file" id="v_fileRef" accept=".csv,.xlsx,.xls" style="display:none">
-                <div style="font-size:2rem;">📄</div>
-                <h5 class="mt-1 mb-1">1️⃣ Referencias</h5>
-                <p class="text-muted small mb-2">Bibliografía a verificar (.xlsx/.csv)</p>
-                <div id="v_statRef" class="small fw-bold" style="color:var(--green);min-height:1.2em;"></div>
-                <button class="btn btn-outline-primary btn-sm mt-1" onclick="document.getElementById('v_fileRef').click()">Seleccionar</button>
-              </div>
+      <!-- Filtros y búsqueda -->
+      <div class="card mb-3 border-light" style="background:var(--cream);">
+        <div class="card-body py-3">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label">Filtrar por Asignatura</label>
+              <select id="bandeja_filtroAsig" class="form-select form-select-sm" onchange="bandeja_renderTabla()">
+                <option value="">— Todas —</option>
+              </select>
             </div>
-            <div class="col-md-6">
-              <div class="drop-zone text-center" id="v_dropCat" style="padding:24px 14px;">
-                <input type="file" id="v_fileCat" accept=".csv,.xlsx,.xls" style="display:none">
-                <div style="font-size:2rem;">📚</div>
-                <h5 class="mt-1 mb-1">2️⃣ Catálogo</h5>
-                <p class="text-muted small mb-2">Libros disponibles en biblioteca</p>
-                <div id="v_statCat" class="small fw-bold" style="color:var(--green);min-height:1.2em;"></div>
-                <button class="btn btn-outline-primary btn-sm mt-1" onclick="document.getElementById('v_fileCat').click()">Seleccionar</button>
-              </div>
+            <div class="col-md-3">
+              <label class="form-label">Filtrar por Fuente</label>
+              <select id="bandeja_filtroFuente" class="form-select form-select-sm" onchange="bandeja_renderTabla()">
+                <option value="">— Todas —</option>
+                <option value="extractor">📂 Extractor Masivo</option>
+                <option value="importador">📚 Importador Zotero</option>
+                <option value="manual">✏️ Ingreso Manual</option>
+              </select>
             </div>
-          </div>
-
-          <!-- Colmap Ref -->
-          <div class="card mb-3" id="v_colmapRef" style="display:none;">
-            <div class="card-body py-3">
-              <label class="form-label mb-1">Columna con las referencias bibliográficas:</label>
-              <select id="v_colRef" class="form-select form-select-sm"></select>
-              <div id="v_prevRef" class="text-muted small mt-2 border-start border-primary ps-2" style="line-height:1.5;"></div>
+            <div class="col-md-3">
+              <label class="form-label">Buscar texto</label>
+              <input type="text" id="bandeja_buscar" class="form-control form-control-sm" placeholder="Referencia..." oninput="bandeja_renderTabla()">
             </div>
-          </div>
-
-          <!-- Colmap Cat -->
-          <div class="card mb-3" id="v_colmapCat" style="display:none;">
-            <div class="card-body py-3">
-              <div class="row g-2">
-                <div class="col-6 col-md-3"><label class="form-label mb-1">Título</label><select id="v_colTit" class="form-select form-select-sm"></select></div>
-                <div class="col-6 col-md-3"><label class="form-label mb-1">Autor</label><select id="v_colAut" class="form-select form-select-sm"></select></div>
-                <div class="col-6 col-md-3"><label class="form-label mb-1">Ejemplares</label><select id="v_colEjem" class="form-select form-select-sm"></select></div>
-                <div class="col-6 col-md-3"><label class="form-label mb-1">Año</label><select id="v_colAnio" class="form-select form-select-sm"></select></div>
-              </div>
-              <div class="alert alert-warning py-1 px-2 mt-2 mb-0 small">⚠️ El año del catálogo debe ser <strong>igual o superior</strong> al año de la referencia para que cuente como válido.</div>
-            </div>
-          </div>
-
-          <!-- Preview tabla parsing -->
-          <div class="card mb-3" id="v_ptableWrap" style="display:none;">
-            <div class="card-body py-3">
-              <h6 class="mb-2" style="font-size:.82rem;font-weight:700;color:var(--muted);">🔍 Vista previa del parsing (primeras 3 referencias)</h6>
-              <div class="table-responsive">
-                <table class="table table-sm table-bordered mb-0" style="font-size:.72rem;">
-                  <thead class="table-light"><tr><th>Referencia</th><th>Apellidos extraídos</th><th>Palabras clave título</th></tr></thead>
-                  <tbody id="v_previewBody"></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- Botones + progreso -->
-          <div class="d-flex gap-2 mb-3">
-            <button class="btn btn-primary" id="v_btnStart" style="display:none;">⚡ PROCESAR REFERENCIAS</button>
-            <button class="btn btn-outline-danger" id="v_btnStop" style="display:none;">⏹ Detener</button>
-          </div>
-          <div id="v_progWrap" style="display:none;" class="mb-3">
-            <div class="progress mb-1" style="height:6px;">
-              <div id="v_pFill" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width:0%;"></div>
-            </div>
-            <small id="v_pTxt" class="text-muted" style="font-family:'DM Mono',monospace;font-size:.7rem;">Procesando...</small>
-          </div>
-
-          <!-- Resultados -->
-          <div id="v_results" style="display:none;">
-            <!-- Métricas -->
-            <div class="row g-2 mb-3" id="v_metricsGrid"></div>
-
-            <!-- Filtros -->
-            <div class="d-flex gap-2 mb-2 flex-wrap align-items-end">
-              <div>
-                <label class="form-label mb-1" style="font-size:.65rem;">Estado</label>
-                <select class="form-select form-select-sm" id="v_fEst" style="width:180px;"><option value="">Todos los estados</option></select>
-              </div>
-              <div>
-                <label class="form-label mb-1" style="font-size:.65rem;">Buscar texto</label>
-                <input type="text" class="form-control form-control-sm" id="v_fSearch" placeholder="Referencia o título..." style="width:220px;">
-              </div>
-              <span class="text-muted small pb-1" id="v_cntLbl" style="font-family:'DM Mono',monospace;font-size:.7rem;"></span>
-            </div>
-
-            <!-- Tabla resultados -->
-            <div class="table-responsive">
-              <table class="table table-bordered table-hover table-sm">
-                <thead style="background:var(--navy);">
-                  <tr>
-                    <th style="color:rgba(255,255,255,.7);font-size:.58rem;letter-spacing:.08em;">#</th>
-                    <th onclick="v_srt('ref')" style="color:rgba(255,255,255,.7);font-size:.58rem;letter-spacing:.08em;cursor:pointer;">REFERENCIA ↕</th>
-                    <th onclick="v_srt('estado')" style="color:rgba(255,255,255,.7);font-size:.58rem;letter-spacing:.08em;cursor:pointer;">ESTADO ↕</th>
-                    <th onclick="v_srt('ejemplares')" style="color:rgba(255,255,255,.7);font-size:.58rem;letter-spacing:.08em;cursor:pointer;">EJEM. ↕</th>
-                    <th onclick="v_srt('titulo_cat')" style="color:rgba(255,255,255,.7);font-size:.58rem;letter-spacing:.08em;cursor:pointer;">TÍTULO CATÁLOGO ↕</th>
-                    <th onclick="v_srt('autor_cat')" style="color:rgba(255,255,255,.7);font-size:.58rem;letter-spacing:.08em;cursor:pointer;">AUTOR ↕</th>
-                    <th onclick="v_srt('score')" style="color:rgba(255,255,255,.7);font-size:.58rem;letter-spacing:.08em;cursor:pointer;">SCORE ↕</th>
-                    <th style="color:rgba(255,255,255,.7);font-size:.58rem;letter-spacing:.08em;">OBS.</th>
-                  </tr>
-                </thead>
-                <tbody id="v_tbody"></tbody>
-              </table>
-            </div>
-
-            <!-- Paginación -->
-            <div class="d-flex justify-content-between align-items-center mt-2 mb-3">
-              <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary btn-sm" onclick="v_prevPage()" id="v_btnPrev">← Anterior</button>
-                <button class="btn btn-outline-secondary btn-sm" onclick="v_nextPage()" id="v_btnNext">Siguiente →</button>
-              </div>
-              <span class="text-muted small" id="v_pageLbl" style="font-family:'DM Mono',monospace;font-size:.7rem;"></span>
-            </div>
-
-            <!-- Descargas -->
-            <div class="d-flex gap-2 justify-content-end flex-wrap">
-              <button class="btn btn-outline-primary btn-sm" id="v_btnDlAll">📥 Excel completo</button>
-              <button class="btn btn-outline-secondary btn-sm" id="v_btnDlNoEnc">📥 Solo no encontrados</button>
-              <button class="btn btn-warning btn-sm fw-bold" id="v_btnEnvCot" style="display:none;" onclick="v_enviarAlCotizador()">💰 Enviar no encontrados al Cotizador</button>
+            <div class="col-md-2 text-end">
+              <button class="btn btn-outline-secondary btn-sm" onclick="bandeja_asignarMasivoModal()">📋 Asignar masivo</button>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- ════════════════════════════════════════
-         PESTAÑA 5 — COTIZADOR
-    ════════════════════════════════════════ -->
-    <div class="tab-pane fade" id="cotizador-pane">
-      <h3 class="mb-1" style="font-family:'DM Sans',sans-serif;font-weight:700;color:var(--navy);">💰 Cotizador de Libros</h3>
-      <p class="text-muted mb-4">Abre automáticamente los sitios de cotización con la búsqueda lista.</p>
-      <div style="max-width:640px;margin:0 auto;">
-
-        <!-- Cola de no encontrados -->
-        <div id="cot_cola_wrap" class="cot-form mb-4" style="display:none;">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-              <div style="font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:700;color:var(--navy);">📋 No encontrados en catálogo</div>
-              <div class="text-muted small">Cargados desde el Verificador · Haz clic en un libro para cotizarlo</div>
-            </div>
-            <div class="d-flex gap-2 align-items-center">
-              <span id="cot_cola_badge" class="badge" style="background:var(--accent-lt);color:var(--accent);font-family:'DM Mono',monospace;"></span>
-              <button onclick="cotizarTodaLaCola()" class="btn btn-primary btn-sm">⚡ Cotizar todos</button>
-              <button onclick="limpiarCola()" class="btn btn-outline-secondary btn-sm">✕ Limpiar</button>
-            </div>
-          </div>
-          <div id="cot_cola_list" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;"></div>
-        </div>
-
-        <!-- Formulario -->
-        <div class="cot-form mb-4">
-          <div style="font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:4px;">Buscar precio de un libro</div>
-          <div class="text-muted small mb-3">Abre automáticamente los sitios de cotización con la búsqueda lista.</div>
-          <label class="form-label">ISBN (recomendado)</label>
-          <input type="text" id="cot_isbn" class="form-control mb-3" placeholder="Ej: 9788491050391">
-          <div class="row g-3 mb-3">
-            <div class="col-md-6"><label class="form-label">Título</label><input type="text" id="cot_titulo" class="form-control" placeholder="Ej: Cálculo diferencial..."></div>
-            <div class="col-md-6"><label class="form-label">Autor</label><input type="text" id="cot_autor" class="form-control" placeholder="Ej: Stewart, J."></div>
-          </div>
-          <!-- Sitios -->
-          <div style="background:var(--accent-lt);border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:14px;">
-            <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Sitios de búsqueda</div>
-            <div class="d-flex gap-4 flex-wrap">
-              <label class="d-flex align-items-center gap-2" style="cursor:pointer;font-size:13px;"><input type="checkbox" id="cot_bookfinder" checked style="width:15px;height:15px;accent-color:var(--accent);"> BookFinder</label>
-              <label class="d-flex align-items-center gap-2" style="cursor:pointer;font-size:13px;"><input type="checkbox" id="cot_buscalibre" checked style="width:15px;height:15px;accent-color:var(--accent);"> BuscaLibre Chile</label>
-              <label class="d-flex align-items-center gap-2" style="cursor:pointer;font-size:13px;"><input type="checkbox" id="cot_amazon" style="width:15px;height:15px;accent-color:var(--accent);"> Amazon</label>
-              <label class="d-flex align-items-center gap-2" style="cursor:pointer;font-size:13px;"><input type="checkbox" id="cot_mercadolibre" style="width:15px;height:15px;accent-color:var(--accent);"> MercadoLibre</label>
-            </div>
-          </div>
-          <!-- Intervalo -->
-          <div class="d-flex align-items-center gap-3 mb-4">
-            <span class="small text-muted text-nowrap">Intervalo entre pestañas: <strong id="cot_intervalo_lbl">3s</strong></span>
-            <input type="range" id="cot_intervalo" min="2" max="10" value="3" oninput="document.getElementById('cot_intervalo_lbl').textContent=this.value+'s'" class="flex-grow-1" style="accent-color:var(--accent);">
-          </div>
-          <button onclick="cotizarLibro()" class="btn btn-primary w-100 py-2 fw-bold">🔍 Buscar precios</button>
-        </div>
-
-        <!-- Progreso cotizador -->
-        <div id="cot_prog" class="cot-form mb-3" style="display:none;">
-          <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:8px;" id="cot_prog_txt">Abriendo...</div>
-          <div class="progress" style="height:6px;">
-            <div id="cot_prog_fill" class="progress-bar bg-primary" style="width:0%;transition:width .3s;"></div>
-          </div>
-        </div>
-
-        <!-- Historial -->
-        <div id="cot_historial_wrap" class="cot-form" style="display:none;">
-          <div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;">Búsquedas recientes</div>
-          <div id="cot_historial_list"></div>
-        </div>
+      <!-- Info flujo -->
+      <div class="alert py-2 px-3 mb-3 small d-flex gap-2 align-items-start" style="background:#eef4ff;border-color:#c2d4f5;color:var(--navy);">
+        <span style="font-size:1.1rem;">💡</span>
+        <div>Las referencias llegan aquí desde el <strong>Extractor Masivo</strong>, el <strong>Importador Zotero/Mendeley</strong> y el <strong>Gestor (→ Bandeja)</strong>. Asigna la asignatura a cada una y haz clic en <strong>"Enviar al Gestor"</strong> cuando estén listas.</div>
       </div>
-    </div>
 
-    <!-- ════════════════════════════════════════
-         PESTAÑA 6 — DISPONIBILIDAD PUCV (manual)
-    ════════════════════════════════════════ -->
-    <div class="tab-pane fade" id="disponibilidad-pane">
-      <h3 class="mb-1" style="font-family:'DM Sans',sans-serif;font-weight:700;color:#0d6efd;">🔍 Panel de Disponibilidad PUCV</h3>
-      <p class="text-muted mb-4">Consulta manual del catálogo PUCV — complementa el Verificador automático.</p>
-      <div class="alert" style="background:#eef4ff;border-color:#c2d4f5;color:var(--navy);border-left:4px solid #0d6efd;border-radius:8px;" class="d-flex gap-3 align-items-start mb-4">
-        <span style="font-size:1.4rem;">💡</span>
-        <div><strong>¿Cómo funciona?</strong><br>Ingresa las referencias manualmente o cárgalas desde el Gestor. Luego haz clic en <strong>"Buscar en catálogo"</strong> — se abre el catálogo PUCV. Marca el resultado y genera el informe final.<br><small class="text-muted">Para verificación automática en lote, usa la pestaña <strong>📊 Verificador de Catálogo</strong>.</small></div>
-      </div>
-      <div class="card mb-4 border-light bg-light">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div><h6 class="mb-0">Cargar desde el Gestor Principal</h6><small class="text-muted">Importa automáticamente las referencias ya cargadas en el Gestor APA 7</small></div>
-            <button class="btn btn-primary btn-sm" onclick="disp_cargarDesdeGestor()">📥 Importar desde Gestor</button>
-          </div>
-        </div>
-      </div>
-      <div class="card mb-4">
-        <div class="card-body">
-          <h6 class="mb-3">Agregar libro manualmente</h6>
-          <div class="row g-2">
-            <div class="col-md-5"><input type="text" id="disp_titulo" class="form-control" placeholder="Título del libro *"></div>
-            <div class="col-md-4"><input type="text" id="disp_autor" class="form-control" placeholder="Autor (opcional)"></div>
-            <div class="col-md-2"><input type="text" id="disp_anio" class="form-control" placeholder="Año"></div>
-            <div class="col-md-1"><button class="btn btn-success w-100" onclick="disp_agregarManual()">+</button></div>
-          </div>
-        </div>
-      </div>
-      <div class="table-responsive mb-3">
-        <table class="table table-bordered table-hover" id="disp_tabla">
-          <thead class="table-dark">
-            <tr><th width="35%">Título</th><th width="22%">Autor</th><th width="7%">Año</th><th width="16%">Buscar en PUCV</th><th width="13%">Disponibilidad</th><th width="7%">Acción</th></tr>
+      <!-- Tabla -->
+      <div class="table-responsive" style="max-height:520px;overflow-y:auto;">
+        <table class="table table-bordered table-hover table-sm" id="bandeja_tabla">
+          <thead class="sticky-top" style="background:var(--navy);">
+            <tr>
+              <th style="width:36px;color:rgba(255,255,255,.7);font-size:.58rem;"><input type="checkbox" id="bandeja_checkAll" onchange="bandeja_toggleAll(this.checked)" title="Seleccionar todo"></th>
+              <th style="color:rgba(255,255,255,.7);font-size:.58rem;letter-spacing:.06em;width:110px;">FUENTE</th>
+              <th style="color:rgba(255,255,255,.7);font-size:.58rem;letter-spacing:.06em;width:110px;">CLAVE</th>
+              <th style="color:rgba(255,255,255,.7);font-size:.58rem;letter-spacing:.06em;">ASIGNATURA</th>
+              <th style="color:rgba(255,255,255,.7);font-size:.58rem;letter-spacing:.06em;width:120px;">TIPO</th>
+              <th style="color:rgba(255,255,255,.7);font-size:.58rem;letter-spacing:.06em;">REFERENCIA</th>
+              <th style="color:rgba(255,255,255,.7);font-size:.58rem;letter-spacing:.06em;width:90px;">ACCIONES</th>
+            </tr>
           </thead>
-          <tbody id="disp_tbody"><tr><td colspan="6" class="text-center text-muted py-4">Aún no hay libros en la lista.</td></tr></tbody>
+          <tbody id="bandeja_tbody"><tr><td colspan="7" class="text-center text-muted py-5">
+            <div style="font-size:2rem;">🗂️</div>
+            <div>La bandeja está vacía.</div>
+            <div class="text-muted small mt-1">Envía referencias desde el Extractor Masivo, el Importador Zotero o el Gestor.</div>
+          </td></tr></tbody>
         </table>
       </div>
-      <div id="disp_resumen" style="display:none;" class="mb-3">
-        <div class="row g-3 text-center mb-3">
-          <div class="col-md-3"><div class="p-3 rounded" style="background:#d1e7dd;border:1px solid #a3cfbb;"><div class="fw-bold fs-4" id="disp_cnt_disponible">0</div><small class="text-success fw-bold">✅ Disponible</small></div></div>
-          <div class="col-md-3"><div class="p-3 rounded" style="background:#fff3cd;border:1px solid #ffe69c;"><div class="fw-bold fs-4" id="disp_cnt_prestado">0</div><small class="text-warning fw-bold">🟡 Prestado / Revisar</small></div></div>
-          <div class="col-md-3"><div class="p-3 rounded" style="background:#f8d7da;border:1px solid #f1aeb5;"><div class="fw-bold fs-4" id="disp_cnt_noesta">0</div><small class="text-danger fw-bold">🔴 No está en catálogo</small></div></div>
-          <div class="col-md-3"><div class="p-3 rounded" style="background:#e2e3e5;border:1px solid #c4c5c7;"><div class="fw-bold fs-4" id="disp_cnt_sin">0</div><small class="text-muted fw-bold">⬜ Sin verificar</small></div></div>
+
+      <!-- Pie acciones -->
+      <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-danger btn-sm" id="bandeja_btnEliminarSel" style="display:none;" onclick="bandeja_eliminarSeleccionadas()">🗑️ Eliminar seleccionadas</button>
+          <button class="btn btn-outline-secondary btn-sm" id="bandeja_btnAsignarSel" style="display:none;" onclick="bandeja_asignarASeleccionadas()">📋 Asignar asignatura a seleccionadas</button>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
-          <button class="btn btn-success" onclick="disp_exportarExcel()">📥 Descargar informe Excel</button>
-          <button class="btn btn-outline-danger" onclick="disp_limpiar()">🗑️ Limpiar lista</button>
+        <div class="d-flex gap-2">
+          <span class="text-muted small" id="bandeja_cntFiltradas" style="font-family:'DM Mono',monospace;font-size:.7rem;line-height:2.5;"></span>
+          <button class="btn btn-success" onclick="bandeja_enviarAlGestor()" id="bandeja_btnEnviar2" disabled>✅ Enviar al Gestor (<span id="bandeja_cntListas">0</span>)</button>
         </div>
       </div>
     </div>
 
-  </div><!-- /tab-content -->
 </div><!-- /main-container -->
 
 <!-- ══ MODAL MANUAL ══ -->
@@ -595,16 +413,15 @@ body{background:var(--cream);font-family:'Inter','Segoe UI',sans-serif;color:var
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header" style="background:var(--navy);">
-        <h5 class="modal-title text-white">📖 Manual de Uso — Suite Académica PUCV v5.0</h5>
+        <h5 class="modal-title text-white">📖 Manual de Uso — Suite Académica PUCV v6.0</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body modal-manual-body">
-        <div class="manual-step-box"><h5 class="text-primary mb-2">🛠️ Gestor APA 7</h5><p>Crea referencias en formato APA 7 manual o automáticamente por ISBN/DOI. Exporta en planilla oficial institucional.</p></div>
-        <div class="manual-step-box"><h5 class="text-success mb-2">📂 Extractor Masivo</h5><p>Carga programas PDF/Word y extrae bibliografía automáticamente. Detecta secciones Básica/Complementaria.</p></div>
-        <div class="manual-step-box"><h5 style="color:#6610f2;" class="mb-2">📚 Importador Zotero/Mendeley</h5><p>Importa archivos .RIS o .BIB y convierte a APA 7. Agrupa por asignatura antes de enviar al Gestor.</p></div>
-        <div class="manual-step-box"><h5 style="color:var(--navy);" class="mb-2">📊 Verificador de Catálogo</h5><p>Carga el Excel de referencias y el catálogo KOHA. El algoritmo cruza automáticamente por autor + palabras clave del título, filtrando por año (el catálogo debe ser ≥ al año de la referencia). Suma ejemplares de todas las ediciones válidas del mismo título. Envía los "No Encontrados" al Cotizador con un clic.</p></div>
-        <div class="manual-step-box"><h5 style="color:var(--gold);" class="mb-2">💰 Cotizador</h5><p>Busca precios en BookFinder, BuscaLibre, Amazon y MercadoLibre. Se puede usar de forma manual o recibir la cola de libros no encontrados desde el Verificador.</p></div>
-        <div class="manual-step-box" style="border-left-color:#198754;"><h5 class="text-success mb-2">✅ Flujo recomendado</h5><p class="mb-1"><strong>Auditoría completa:</strong></p><p class="text-muted small">Extractor Masivo → Gestor → Verificador de Catálogo → Cotizador (para los no encontrados)</p></div>
+        <div class="manual-step-box"><h5 class="text-primary mb-2">🛠️ Gestor APA 7</h5><p>Crea referencias en formato APA 7 manual o automáticamente por ISBN/DOI. Agrega directamente a la lista o envía a la Bandeja de Clasificación. Exporta en planilla oficial institucional.</p></div>
+        <div class="manual-step-box"><h5 class="text-success mb-2">📂 Extractor Masivo</h5><p>Carga programas PDF/Word y extrae bibliografía automáticamente. Detecta secciones Básica/Complementaria. Envía referencias a la Bandeja de Clasificación para organizar antes del Gestor.</p></div>
+        <div class="manual-step-box"><h5 style="color:#6610f2;" class="mb-2">📚 Importador Zotero/Mendeley</h5><p>Importa archivos .RIS o .BIB y convierte a APA 7. Envía referencias a la Bandeja de Clasificación para asignar asignatura y ordenar antes del Gestor.</p></div>
+        <div class="manual-step-box" style="border-left-color:var(--gold);"><h5 style="color:var(--gold);" class="mb-2">🗂️ Bandeja de Clasificación</h5><p>Etapa intermedia donde llegan referencias del Extractor, el Importador y el Gestor. Permite editar metadatos, asignar asignatura/categoría, filtrar, ordenar y validar antes de enviar al Gestor Final.</p></div>
+        <div class="manual-step-box" style="border-left-color:#198754;"><h5 class="text-success mb-2">✅ Flujo recomendado</h5><p class="mb-1"><strong>Flujo completo:</strong></p><p class="text-muted small">Extractor Masivo / Importador Zotero → Bandeja de Clasificación → Asignatura + Orden → Validación → Gestor APA 7 → Exportación Excel</p></div>
       </div>
     </div>
   </div>
@@ -748,7 +565,15 @@ async function gestor_buscarMetadatos() {
 }
 
 function gestor_agregarReferencia(){
-  const tipo=document.getElementById('tipoRecurso').value;if(!tipo)return;
+  const refObj=gestor_construirReferencia();if(!refObj)return;
+  gestor_refs.push({Carrera:document.getElementById('g_carrera').value,Clave:document.getElementById('g_clave').value,Asignatura:document.getElementById('g_nombre').value,Tipo:document.getElementById('tipoBiblio').value,Referencia:refObj.Referencia,ISBN:refObj.ISBN});
+  gestor_renderTabla();
+  document.getElementById('camposDinamicos').innerHTML='';
+  document.getElementById('tipoRecurso').value='';
+}
+
+function gestor_construirReferencia(){
+  const tipo=document.getElementById('tipoRecurso').value;if(!tipo)return null;
   const g=(id)=>{const el=document.getElementById(`g_${id}`);return el?el.value.trim():'';};
   let ref='';
   if(tipo==='libro') ref=`${g('autor')} (${g('anio')}). <i>${g('titulo')}</i>. ${g('editorial')}.`;
@@ -760,10 +585,7 @@ function gestor_agregarReferencia(){
   else ref=`${g('autor')} (${g('fecha')||g('anio')}). <i>${g('titulo')||g('tituloCap')}</i>. ${g('url')}`;
   ref=ref.trim().replace(/\s*\.+\s*\.+/g,'.');if(!ref.endsWith('.'))ref+='.';if(ref.startsWith(" ("))ref=ref.substring(1);
   const isbnEl=document.getElementById('g_isbn');const isbn=isbnEl?isbnEl.value.trim():'';
-  gestor_refs.push({Carrera:document.getElementById('g_carrera').value,Clave:document.getElementById('g_clave').value,Asignatura:document.getElementById('g_nombre').value,Tipo:document.getElementById('tipoBiblio').value,Referencia:ref,ISBN:isbn});
-  gestor_renderTabla();
-  document.getElementById('camposDinamicos').innerHTML='';
-  document.getElementById('tipoRecurso').value='';
+  return{Referencia:ref,ISBN:isbn};
 }
 
 function gestor_renderTabla(){
@@ -771,6 +593,24 @@ function gestor_renderTabla(){
   gestor_refs.forEach((r,i)=>tbody.innerHTML+=`<tr><td>${r.Tipo}</td><td>${r.Referencia}</td><td><small class="text-muted">${r.ISBN||'—'}</small></td><td><button class="btn btn-sm btn-danger" onclick="gestor_eliminar(${i})">X</button></td></tr>`);
 }
 function gestor_eliminar(i){gestor_refs.splice(i,1);gestor_renderTabla();}
+
+function gestor_enviarABandeja(){
+  // Recoge el estado actual del formulario y lo envía a Bandeja
+  const tipo=document.getElementById('tipoRecurso').value;
+  if(!tipo)return alert('Selecciona un tipo de recurso primero.');
+  const carrera=(document.getElementById('g_carrera')||{}).value?.trim()||'';
+  const clave=(document.getElementById('g_clave')||{}).value?.trim()||'';
+  const nombre=(document.getElementById('g_nombre')||{}).value?.trim()||'';
+  const tipoBiblio=document.getElementById('tipoBiblio').value;
+  // Construir la referencia usando la función existente
+  const refObj=gestor_construirReferencia();
+  if(!refObj)return;
+  const st=validarCalidad(refObj.Referencia.replace(/<[^>]*>/g,''));
+  bandeja_refs.push({carrera,clave,asignatura:nombre,tipo:tipoBiblio,ref:refObj.Referencia,isbn:refObj.ISBN||'',obs:st.level!=='success'?st.msg:'',fuente:'manual',status:st});
+  bandeja_actualizarUI();
+  alert('✅ Referencia enviada a la Bandeja de Clasificación.');
+  document.querySelector('[data-bs-target="#bandeja-pane"]').click();
+}
 
 // ── Helper compartido: construye la hoja planilla institucional ──────────────
 // Estructura: tipo en misma fila que primera ref, A/B fusionados por asignatura,
@@ -1524,7 +1364,7 @@ function ext_toggleAll(checked){document.querySelectorAll('.ref-check').forEach(
 function ext_eliminarSeleccionadas(){const sel=[...document.querySelectorAll('.ref-check:checked')].map(c=>parseInt(c.dataset.idx));if(!sel.length)return;if(!confirm(`¿Eliminar ${sel.length} referencia(s)?`))return;const s=new Set(sel);ext_datos=ext_datos.filter((_,i)=>!s.has(i));ext_updateView();}
 function ext_editarAsignatura(key){const [ca,na]=key.split('||');const nc=prompt('Clave:',ca==='—'?'':ca);if(nc===null)return;const nn=prompt('Nombre:',na==='—'?'':na);if(nn===null)return;ext_datos.forEach(d=>{if((d.clave||'—')===ca&&(d.nombre||'—')===na){d.clave=nc.trim();d.nombre=nn.trim();}});ext_updateView();}
 function ext_reiniciarTodo(){if(!confirm("¿Borrar todo?"))return;ext_datos=[];ext_filesProcesados.clear();ext_archivos={};ext_ordenArchivos=[];ext_gruposSeleccionados=[];ext_updateContador();document.getElementById('tablaExtractorBody').innerHTML='<tr><td colspan="6" class="text-center text-muted">Esperando...</td></tr>';document.getElementById('badgeArchivos').innerText="0";document.getElementById('badgeRefs').innerText="0";document.getElementById('btnDescargarExt').classList.add('disabled');document.getElementById('btnEnviarGestor').classList.add('disabled');document.getElementById('statusLog').innerText='Listo para procesar.';}
-function ext_enviarAlGestor(){if(!ext_datos.length)return;let ag=0;ext_datos.forEach(d=>{if(!gestor_refs.some(r=>r.Referencia===d.ref)){gestor_refs.push({Carrera:d.carrera||'',Clave:d.clave||'',Asignatura:d.nombre||'',Tipo:d.tipo,Referencia:d.ref,ISBN:'',Observaciones:d.status.level!=='success'?d.status.msg:''});ag++;}});gestor_renderTabla();alert(`✅ ${ag} referencia(s) enviadas al Gestor.`);document.querySelector('[data-bs-target="#gestor-pane"]').click();}
+function ext_enviarAlGestor(){if(!ext_datos.length)return;const refsValidas=ext_datos.filter(d=>!d.sinrefs);if(!refsValidas.length)return alert('No hay referencias válidas para enviar.');let ag=0;refsValidas.forEach(d=>{bandeja_refs.push({carrera:d.carrera||'',clave:d.clave||'',asignatura:d.nombre||'',tipo:d.tipo||'Básica',ref:d.ref,isbn:d.ISBN||'',obs:d.status.level!=='success'?d.status.msg:'',fuente:'extractor',status:d.status});ag++;});bandeja_actualizarUI();alert(`✅ ${ag} referencia(s) enviadas a la Bandeja de Clasificación.`);document.querySelector('[data-bs-target="#bandeja-pane"]').click();}
 function ext_exportarExcel(){
   if(!ext_datos.length)return;
   const wb=XLSX.utils.book_new();
@@ -1575,442 +1415,193 @@ function imp_enviarAlGestor(){
   if(!imp_referencias.length)return alert('No hay referencias.');
   const carrera=document.getElementById('imp_carrera').value.trim(),clave=document.getElementById('imp_clave').value.trim(),asig=document.getElementById('imp_asignatura').value.trim();
   let ag=0,sel=0;
-  imp_referencias.forEach((ref,idx)=>{const chk=document.getElementById(`imp_chk_${idx}`);if(!chk||!chk.checked)return;sel++;const cita=imp_generarAPA(ref),tipoEl=document.getElementById(`imp_tipo_${idx}`),tipo=tipoEl?tipoEl.value:'Básica';if(!gestor_refs.some(r=>r.Referencia===cita)){gestor_refs.push({Carrera:carrera,Clave:clave,Asignatura:asig,Tipo:tipo,Referencia:cita,ISBN:''});ag++;}});
+  imp_referencias.forEach((ref,idx)=>{const chk=document.getElementById(`imp_chk_${idx}`);if(!chk||!chk.checked)return;sel++;const cita=imp_generarAPA(ref),tipoEl=document.getElementById(`imp_tipo_${idx}`),tipo=tipoEl?tipoEl.value:'Básica';const st=validarCalidad(cita.replace(/<[^>]*>/g,''));bandeja_refs.push({carrera,clave,asignatura:asig,tipo,ref:cita,isbn:'',obs:st.level!=='success'?st.msg:'',fuente:'importador',status:st});ag++;});
   if(!sel)return alert('No hay referencias seleccionadas.');
-  gestor_renderTabla();alert(`✅ ${ag} referencia(s) enviadas.`);document.querySelector('[data-bs-target="#gestor-pane"]').click();
+  bandeja_actualizarUI();alert(`✅ ${ag} referencia(s) enviadas a la Bandeja de Clasificación.`);document.querySelector('[data-bs-target="#bandeja-pane"]').click();
 }
 </script>
 
+
 <!-- ══════════════════════════════════════════════════════════
-     SCRIPT 4 — VERIFICADOR DE CATÁLOGO v4.3
+     SCRIPT 4 — BANDEJA DE CLASIFICACIÓN
 ══════════════════════════════════════════════════════════ -->
 <script>
-// ── Constantes y estado ────────────────────────────────────
-var STOP={de:1,del:1,la:1,el:1,los:1,las:1,un:1,una:1,y:1,en:1,con:1,por:1,para:1,al:1,a:1,e:1,o:1,es:1,su:1,se:1,que:1,lo:1,le:1,si:1,no:1,vol:1,ed:1,eds:1,edicion:1,edition:1,primera:1,segunda:1,tercera:1,cuarta:1,quinta:1,sexta:1,septima:1,octava:1,novena:1,decima:1,editorial:1,editores:1,cengage:1,learning:1,mcgraw:1,hill:1,pearson:1,limusa:1,alfaomega:1,graw:1,mc:1,sa:1,soc:1,chile:1,mexico:1,barcelona:1,colombia:1,argentina:1,impa:1,ediciones:1,universidad:1,catolica:1,valparaiso:1,pontificia:1,pucv:1,ucv:1,gestion:1,reverte:1,thomson:1,springer:1,addison:1,wiley:1,potenciando:1,pensamiento:1,critico:1,traves:1,coleccion:1,matematica:1};
-var CONN={y:1,and:1,et:1,von:1,van:1,de:1,del:1,la:1,los:1,las:1};
-var THRESHOLD=60, V_PAGE=100;
-var v_dataRef=[],v_dataCat=[],v_allResults=[],v_filtered=[];
-var v_sortKey=null,v_sortDir=1,v_pg=0,v_stopFlag=false;
+let bandeja_refs = [];
+// Índice en edición inline
+let bandeja_editIdx = -1;
 
-// ── Normalización ──────────────────────────────────────────
-function norm(t){if(!t)return '';return String(t).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
-
-// ── parseRef ───────────────────────────────────────────────
-function parseRef(ref){
-  var s=String(ref||'').trim();
-  var isArticle=/journal|revista|doi\.org|issn|transactions|proceedings|vol\.|pp\.|issue|quarterly/i.test(s);
-  var authSec='',titleText='';
-  var ym=s.match(/\(\s*\d{4}\s*\)/);
-  if(ym){var yi=s.indexOf(ym[0]);authSec=s.slice(0,yi);titleText=s.slice(yi+ym[0].length).replace(/^\s*\.?\s*/,'');}
-  else{var re=/\b[A-Z]\.\s+/g,m,lastEnd=-1;while((m=re.exec(s))!==null){var after=s.slice(m.index+m[0].length);if(/^[A-ZÁÉÍÓÚ][a-záéíóú]{2,}/.test(after))lastEnd=m.index+m[0].length;}
-  if(lastEnd>0){authSec=s.slice(0,lastEnd);titleText=s.slice(lastEnd);}
-  else{var dm=s.match(/\.\s+([A-ZÁÉÍÓÚ].+)/);if(dm){authSec=s.slice(0,s.indexOf(dm[0]));titleText=dm[1];}else{authSec='';titleText=s;}}}
-  var surnames=[],seenSn={};
-  var snRe=/\b([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})\b/g,snM;
-  while((snM=snRe.exec(authSec))!==null){var n=norm(snM[1]);if(!CONN[n]&&!seenSn[n]){surnames.push(n);seenSn[n]=1;}}
-  titleText=titleText.replace(/\b\d{4}\b/g,' ').replace(/\b\d+\s*[vaeoaº°]+\.?\b/gi,' ').replace(/\b[A-Z]\.\s*/g,' ').replace(/([a-záéíóúA-ZÁÉÍÓÚ])(\d)/g,'$1 $2').replace(/(\d)([a-záéíóúA-ZÁÉÍÓÚ])/g,'$1 $2');
-  var tw=[],seenTw={},words=norm(titleText).split(/\s+/);
-  for(var i=0;i<words.length&&tw.length<5;i++){var w=words[i];if(w.length>2&&!STOP[w]&&!/^\d+$/.test(w)&&!seenSn[w]&&!seenTw[w]){tw.push(w);seenTw[w]=1;}}
-  return{surnames:surnames,tw:tw,isArticle:isArticle,anio:ym?parseInt(ym[0].replace(/[()]/g,'').trim()):0};
+function bandeja_actualizarUI(){
+  const n = bandeja_refs.length;
+  // Badges
+  document.getElementById('bandeja_badge_total').textContent = n + ' referencia' + (n!==1?'s':'');
+  const nav = document.getElementById('bandeja_badge_nav');
+  if(n>0){nav.textContent=n;nav.style.display='inline';}else{nav.style.display='none';}
+  // Botones enviar
+  const hasRefs = n > 0;
+  document.getElementById('bandeja_btnEnviar').disabled = !hasRefs;
+  document.getElementById('bandeja_btnEnviar2').disabled = !hasRefs;
+  document.getElementById('bandeja_cntListas').textContent = n;
+  // Actualizar filtro asignaturas
+  bandeja_actualizarFiltroAsig();
+  bandeja_renderTabla();
 }
 
-// ── buildIndex ─────────────────────────────────────────────
-function buildIndex(data,colTit,colAut,colEjem,colAnio){
-  var groups={},order=[];
-  data.forEach(function(row){
-    var titulo=String(row[colTit]||''),autor=String(row[colAut]||'');
-    var ejem=parseInt(row[colEjem])||0,anio=parseInt(row[colAnio])||0;
-    var nt=norm(titulo),na=norm(autor),naSn=na.split(/\s+/)[0]||'';
-    var key=nt+'||'+naSn+'||'+anio;
-    if(groups[key]){groups[key].ejem+=ejem;}
-    else{var tw={};nt.split(/\s+/).forEach(function(w){if(w.length>2&&!STOP[w]&&!/^\d+$/.test(w))tw[w]=1;});groups[key]={titulo:titulo,autor:autor,ejem:ejem,anio:anio,naSn:naSn,tw:tw};order.push(key);}
+function bandeja_actualizarFiltroAsig(){
+  const sel = document.getElementById('bandeja_filtroAsig');
+  const val = sel.value;
+  const asigs = [...new Set(bandeja_refs.map(r=>r.asignatura||'—'))].sort();
+  sel.innerHTML = '<option value="">— Todas —</option>' +
+    asigs.map(a=>`<option value="${a}" ${val===a?'selected':''}>${a}</option>`).join('');
+}
+
+function bandeja_renderTabla(){
+  const tbody = document.getElementById('bandeja_tbody');
+  const filtroAsig = document.getElementById('bandeja_filtroAsig').value;
+  const filtroFuente = document.getElementById('bandeja_filtroFuente').value;
+  const buscar = (document.getElementById('bandeja_buscar').value||'').toLowerCase();
+
+  const filtered = bandeja_refs.filter((r,i)=>{
+    if(filtroAsig && (r.asignatura||'—')!==filtroAsig) return false;
+    if(filtroFuente && r.fuente!==filtroFuente) return false;
+    if(buscar && !(r.ref||'').toLowerCase().includes(buscar)) return false;
+    return true;
   });
-  return order.map(function(k){return groups[k];});
-}
 
-// ── scoreEntry ─────────────────────────────────────────────
-function scoreEntry(surnames,refTw,entry){
-  var authSc=0;
-  for(var i=0;i<surnames.length;i++){var sn=surnames[i],sc=0;if(sn===entry.naSn)sc=50;else if(entry.naSn&&(sn.indexOf(entry.naSn)!==-1||entry.naSn.indexOf(sn)!==-1))sc=25;if(sc>authSc)authSc=sc;}
-  var titleSc=0,hits=0;
-  for(var j=0;j<refTw.length;j++){var w=refTw[j];if(entry.tw[w]){hits++;titleSc+=w.length>6?25:15;}}
-  var total=authSc+titleSc;
-  if(surnames.length>0&&authSc===0&&entry.naSn)total-=30;
-  return{total:total,hits:hits,authSc:authSc};
-}
+  document.getElementById('bandeja_cntFiltradas').textContent =
+    filtered.length < bandeja_refs.length ? `Mostrando ${filtered.length} de ${bandeja_refs.length}` : '';
 
-// ── matchRef (con filtro de año + suma de ejemplares) ──────
-function matchRef(ref,catIndex){
-  var p=parseRef(ref);
-  if(p.isArticle)return{estado:'ARTÍCULO CIENTÍFICO',ejemplares:0,titulo_cat:'',autor_cat:'',score:0,obs:'Verificar online',link:'https://scholar.google.com/scholar?q='+encodeURIComponent(ref)};
-  function anioValido(entry){if(!p.anio||!entry.anio)return true;return entry.anio>=p.anio;}
-  var bestTotal=-999,bestHits=0,bestAuth=0,bestEntry=null;
-  for(var i=0;i<catIndex.length;i++){
-    if(!anioValido(catIndex[i]))continue;
-    var r=scoreEntry(p.surnames,p.tw,catIndex[i]);
-    if(r.total>bestTotal||(r.total===bestTotal&&r.hits>bestHits)){bestTotal=r.total;bestHits=r.hits;bestAuth=r.authSc;bestEntry=catIndex[i];}
+  if(!filtered.length){
+    tbody.innerHTML = bandeja_refs.length ?
+      '<tr><td colspan="7" class="text-center text-muted py-4">No hay referencias que coincidan con el filtro.</td></tr>' :
+      `<tr><td colspan="7" class="text-center text-muted py-5"><div style="font-size:2rem;">🗂️</div><div>La bandeja está vacía.</div><div class="text-muted small mt-1">Envía referencias desde el Extractor Masivo, el Importador Zotero o el Gestor.</div></td></tr>`;
+    return;
   }
-  var minHits=bestAuth===50?1:(p.tw.length>=3?2:1);
-  var found=bestTotal>=THRESHOLD&&bestHits>=minHits;
-  if(found&&bestEntry){
-    var totalEjem=0;
-    for(var j=0;j<catIndex.length;j++){
-      if(!anioValido(catIndex[j]))continue;
-      var rs=scoreEntry(p.surnames,p.tw,catIndex[j]);
-      if(rs.total>=THRESHOLD&&rs.hits>=minHits&&rs.total>=bestTotal-10)totalEjem+=catIndex[j].ejem;
+
+  tbody.innerHTML = filtered.map((r, fi) => {
+    const realIdx = bandeja_refs.indexOf(r);
+    const fuenteLabel = r.fuente==='extractor'
+      ? '<span class="bandeja-source-badge bandeja-source-ext">📂 Extractor</span>'
+      : r.fuente==='importador'
+      ? '<span class="bandeja-source-badge bandeja-source-imp">📚 Zotero</span>'
+      : '<span class="bandeja-source-badge bandeja-source-manual">✏️ Manual</span>';
+    const stColor = !r.status || r.status.level==='success' ? '' :
+      r.status.level==='warning' ? 'background:#fffbea;' : 'background:#fff1f2;';
+    const claveDisplay = r.clave||'<span class="text-muted">—</span>';
+    const asigDisplay = r.asignatura||'<span class="text-muted">—</span>';
+    return `<tr style="${stColor}" data-real-idx="${realIdx}">
+      <td class="text-center"><input type="checkbox" class="bandeja-check" data-idx="${realIdx}" onchange="bandeja_onCheckChange()"></td>
+      <td>${fuenteLabel}</td>
+      <td><input type="text" class="form-control form-control-sm" value="${(r.clave||'').replace(/"/g,'&quot;')}"
+        placeholder="Clave" oninput="bandeja_refs[${realIdx}].clave=this.value" style="font-size:11px;min-width:80px;"></td>
+      <td><input type="text" class="form-control form-control-sm" value="${(r.asignatura||'').replace(/"/g,'&quot;')}"
+        placeholder="Asignatura" oninput="bandeja_refs[${realIdx}].asignatura=this.value;bandeja_actualizarFiltroAsig();" style="font-size:11px;min-width:120px;"></td>
+      <td><select class="form-select form-select-sm" onchange="bandeja_refs[${realIdx}].tipo=this.value" style="font-size:11px;">
+        <option ${r.tipo==='Básica'?'selected':''}>Básica</option>
+        <option ${r.tipo==='Complementaria'?'selected':''}>Complementaria</option>
+      </select></td>
+      <td style="max-width:400px;word-break:break-word;white-space:normal;font-size:.78rem;">${r.ref||''}
+        ${r.status&&r.status.level!=='success'?`<div class="text-muted" style="font-size:.65rem;font-style:italic;">${r.status.msg}</div>`:''}
+      </td>
+      <td class="text-center" style="white-space:nowrap;">
+        <button class="btn btn-xs btn-outline-primary btn-sm py-0 px-1 me-1" style="font-size:.7rem;" title="Mover arriba" onclick="bandeja_mover(${realIdx},-1)">↑</button>
+        <button class="btn btn-xs btn-outline-primary btn-sm py-0 px-1 me-1" style="font-size:.7rem;" title="Mover abajo" onclick="bandeja_mover(${realIdx},1)">↓</button>
+        <button class="btn btn-xs btn-outline-danger btn-sm py-0 px-1" style="font-size:.7rem;" title="Eliminar" onclick="bandeja_eliminarUna(${realIdx})">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function bandeja_mover(idx, dir){
+  const newIdx = idx + dir;
+  if(newIdx<0||newIdx>=bandeja_refs.length)return;
+  [bandeja_refs[idx],bandeja_refs[newIdx]]=[bandeja_refs[newIdx],bandeja_refs[idx]];
+  bandeja_renderTabla();
+}
+
+function bandeja_eliminarUna(idx){
+  if(!confirm('¿Eliminar esta referencia de la bandeja?'))return;
+  bandeja_refs.splice(idx,1);
+  bandeja_actualizarUI();
+}
+
+function bandeja_limpiarTodo(){
+  if(!bandeja_refs.length)return;
+  if(!confirm('¿Vaciar toda la Bandeja de Clasificación?'))return;
+  bandeja_refs=[];
+  bandeja_actualizarUI();
+}
+
+function bandeja_onCheckChange(){
+  const checks = document.querySelectorAll('.bandeja-check');
+  const sel = [...checks].filter(c=>c.checked).length;
+  const btnEl = document.getElementById('bandeja_btnEliminarSel');
+  const btnAs = document.getElementById('bandeja_btnAsignarSel');
+  if(btnEl) btnEl.style.display = sel>0?'inline-block':'none';
+  if(btnAs) btnAs.style.display = sel>0?'inline-block':'none';
+  const ca = document.getElementById('bandeja_checkAll');
+  if(ca) ca.checked = sel===checks.length&&checks.length>0;
+}
+
+function bandeja_toggleAll(checked){
+  document.querySelectorAll('.bandeja-check').forEach(c=>c.checked=checked);
+  bandeja_onCheckChange();
+}
+
+function bandeja_eliminarSeleccionadas(){
+  const sel = [...document.querySelectorAll('.bandeja-check:checked')].map(c=>parseInt(c.dataset.idx));
+  if(!sel.length)return;
+  if(!confirm(`¿Eliminar ${sel.length} referencia(s) de la bandeja?`))return;
+  const s = new Set(sel);
+  bandeja_refs = bandeja_refs.filter((_,i)=>!s.has(i));
+  bandeja_actualizarUI();
+}
+
+function bandeja_asignarASeleccionadas(){
+  const sel = [...document.querySelectorAll('.bandeja-check:checked')].map(c=>parseInt(c.dataset.idx));
+  if(!sel.length)return;
+  const clave = prompt('Clave de asignatura (ej. MAT-101):','');
+  if(clave===null)return;
+  const asig = prompt('Nombre de asignatura (ej. Cálculo I):','');
+  if(asig===null)return;
+  sel.forEach(i=>{bandeja_refs[i].clave=clave.trim();bandeja_refs[i].asignatura=asig.trim();});
+  bandeja_actualizarUI();
+}
+
+function bandeja_asignarMasivoModal(){
+  const clave = prompt('Clave de asignatura (ej. MAT-101)\n(se asignará a referencias sin asignatura):','');
+  if(clave===null)return;
+  const asig = prompt('Nombre de asignatura:','');
+  if(asig===null)return;
+  let cnt=0;
+  bandeja_refs.forEach(r=>{if(!r.asignatura||r.asignatura==='—'){r.clave=clave.trim();r.asignatura=asig.trim();cnt++;}});
+  bandeja_actualizarUI();
+  if(cnt>0)alert(`✅ Asignatura asignada a ${cnt} referencia(s).`);
+}
+
+function bandeja_enviarAlGestor(){
+  if(!bandeja_refs.length)return;
+  const sinAsig = bandeja_refs.filter(r=>!r.asignatura||r.asignatura==='—');
+  if(sinAsig.length>0){
+    if(!confirm(`⚠️ ${sinAsig.length} referencia(s) no tienen asignatura asignada. ¿Enviar de todas formas?`))return;
+  }
+  let ag=0;
+  bandeja_refs.forEach(r=>{
+    const refPlain=r.ref;
+    if(!gestor_refs.some(g=>g.Referencia===refPlain)){
+      gestor_refs.push({Carrera:r.carrera||'',Clave:r.clave||'',Asignatura:r.asignatura||'',Tipo:r.tipo||'Básica',Referencia:r.ref,ISBN:r.isbn||'',Observaciones:r.obs||''});
+      ag++;
     }
-    var anioInfo=p.anio?' · ≥'+p.anio:'';
-    return{estado:totalEjem>0?'EN BIBLIOTECA':'SIN STOCK',ejemplares:totalEjem,titulo_cat:bestEntry.titulo,autor_cat:bestEntry.autor,score:bestTotal,obs:'Score '+bestTotal+' · '+bestHits+' hit(s)'+anioInfo,link:''};
-  }
-  return{estado:'NO ENCONTRADO',ejemplares:0,titulo_cat:'',autor_cat:'',score:bestTotal,obs:'Score '+bestTotal+' insuf. · '+p.tw.slice(0,3).join(', '),link:'https://www.bookfinder.com/search/?keywords='+encodeURIComponent(ref.slice(0,60))};
-}
-
-// ── Carga de archivos ──────────────────────────────────────
-function v_setupDrop(dId,iId,sId,cb){
-  var drop=document.getElementById(dId),inp=document.getElementById(iId);
-  inp.addEventListener('change',function(e){v_loadFile(e.target.files[0],drop,sId,cb);});
-  drop.addEventListener('dragover',function(e){e.preventDefault();drop.classList.add('drag');});
-  drop.addEventListener('dragleave',function(){drop.classList.remove('drag');});
-  drop.addEventListener('drop',function(e){e.preventDefault();drop.classList.remove('drag');if(e.dataTransfer.files[0])v_loadFile(e.dataTransfer.files[0],drop,sId,cb);});
-}
-function v_loadFile(file,drop,sId,cb){
-  if(!file)return;
-  var r=new FileReader();
-  r.onload=function(e){
-    try{var wb=XLSX.read(e.target.result,{type:'binary'}),ws=wb.Sheets[wb.SheetNames[0]],json=XLSX.utils.sheet_to_json(ws,{defval:''});
-    drop.classList.add('ok');document.getElementById(sId).textContent='✓ '+file.name+' · '+json.length+' filas';cb(json);}
-    catch(err){v_showAlert('e','Error: '+err.message);}
-  };r.readAsBinaryString(file);
-}
-
-v_setupDrop('v_dropRef','v_fileRef','v_statRef',function(d){
-  v_dataRef=d;
-  v_fillSel('v_colRef',d,/ref|bib|tit|cit|libro|obra/i);
-  document.getElementById('v_colmapRef').style.display='block';
-  v_checkReady();
-});
-v_setupDrop('v_dropCat','v_fileCat','v_statCat',function(d){
-  v_dataCat=d;
-  v_fillSel('v_colTit',d,/tit|titulo|title|nombre|libro/i);
-  v_fillSel('v_colAut',d,/aut|autor|author|escritor/i);
-  v_fillSel('v_colEjem',d,/ejem|ejemplar|cop|stock|cant|disp/i);
-  v_fillSel('v_colAnio',d,/^a[ñn]o$|year|fecha|anio|año/i);
-  document.getElementById('v_colmapCat').style.display='block';
-  v_checkReady();
-});
-
-function v_fillSel(id,data,re){
-  var cols=Object.keys(data[0]||{}),sel=document.getElementById(id);
-  sel.innerHTML=cols.map(function(c){return'<option value="'+v_escH(c)+'">'+v_escH(c)+'</option>';}).join('');
-  var auto=cols.filter(function(c){return re.test(c);})[0]||cols[0];
-  if(auto)sel.value=auto;
-  if(id==='v_colRef'){sel.addEventListener('change',v_updatePreview);v_updatePreview();}
-}
-
-function v_updatePreview(){
-  var col=document.getElementById('v_colRef').value;
-  if(!v_dataRef.length||!col)return;
-  document.getElementById('v_prevRef').textContent=v_dataRef.slice(0,2).map(function(r){return String(r[col]).slice(0,70);}).join(' / ');
-  var tbody=document.getElementById('v_previewBody');
-  tbody.innerHTML=v_dataRef.slice(0,3).map(function(row){var ref=String(row[col]||''),p=parseRef(ref);return'<tr><td class="reftd">'+v_escH(ref.slice(0,55))+(ref.length>55?'…':'')+'</td><td style="font-family:\'DM Mono\',monospace;font-size:.68rem;color:var(--accent);">'+v_escH(p.surnames.slice(0,3).join(', '))+'</td><td style="font-family:\'DM Mono\',monospace;font-size:.68rem;color:var(--accent);">'+v_escH(p.tw.join(', '))+'</td></tr>';}).join('');
-  document.getElementById('v_ptableWrap').style.display='block';
-}
-
-function v_checkReady(){
-  if(v_dataRef.length&&v_dataCat.length){document.getElementById('v_btnStart').style.display='inline-block';}
-}
-
-// ── Procesamiento ──────────────────────────────────────────
-document.getElementById('v_btnStart').addEventListener('click',function(){
-  var colRef=document.getElementById('v_colRef').value,colTit=document.getElementById('v_colTit').value,colAut=document.getElementById('v_colAut').value,colEjem=document.getElementById('v_colEjem').value,colAnio=document.getElementById('v_colAnio').value;
-  if(!v_dataRef.length||!v_dataCat.length){v_showAlert('e','Faltan archivos.');return;}
-  v_clearAlerts();v_stopFlag=false;v_allResults=[];
-  document.getElementById('v_btnStart').disabled=true;
-  document.getElementById('v_btnStop').style.display='inline-block';
-  document.getElementById('v_progWrap').style.display='block';
-  document.getElementById('v_results').style.display='none';
-  var catIndex=buildIndex(v_dataCat,colTit,colAut,colEjem,colAnio);
-  var total=v_dataRef.length,i=0;
-  function chunk(){
-    var end=Math.min(i+50,total);
-    for(;i<end&&!v_stopFlag;i++){var ref=String(v_dataRef[i][colRef]||'');if(!ref.trim())continue;var res=matchRef(ref,catIndex);res.ref=ref;res.idx=v_allResults.length+1;v_allResults.push(res);}
-    var pct=Math.round((i/total)*100);
-    document.getElementById('v_pFill').style.width=pct+'%';
-    document.getElementById('v_pTxt').textContent='Procesando... '+i+' / '+total+' ('+pct+'%)';
-    if(i<total&&!v_stopFlag){setTimeout(chunk,0);}
-    else{document.getElementById('v_btnStart').disabled=false;document.getElementById('v_btnStop').style.display='none';document.getElementById('v_progWrap').style.display='none';v_renderAll();v_showAlert(v_stopFlag?'w':'o',v_stopFlag?('⏹ Detenido en '+i+'.'):'✅ Completado — '+v_allResults.length+' referencias procesadas.');}
-  }
-  setTimeout(chunk,0);
-});
-document.getElementById('v_btnStop').addEventListener('click',function(){v_stopFlag=true;});
-
-// ── Render resultados ──────────────────────────────────────
-function v_renderAll(){
-  document.getElementById('v_results').style.display='block';
-  var total=v_allResults.length;
-  var enBib=v_allResults.filter(function(r){return r.estado==='EN BIBLIOTECA';}).length;
-  var noEnc=v_allResults.filter(function(r){return r.estado==='NO ENCONTRADO';}).length;
-  var sinStock=v_allResults.filter(function(r){return r.estado==='SIN STOCK';}).length;
-  var arts=v_allResults.filter(function(r){return r.estado==='ARTÍCULO CIENTÍFICO';}).length;
-  var btnCot=document.getElementById('v_btnEnvCot');
-  if(noEnc+sinStock>0){btnCot.style.display='inline-block';btnCot.textContent='💰 Enviar '+(noEnc+sinStock)+' no encontrados al Cotizador';}
-  else btnCot.style.display='none';
-  document.getElementById('v_metricsGrid').innerHTML=[
-    {l:'📚 Total',v:total,s:'',c:'var(--navy)'},
-    {l:'✅ En Biblioteca',v:enBib,s:total?Math.round(enBib/total*100)+'%':'',c:'var(--green)'},
-    {l:'❓ No Encontrado',v:noEnc,s:'',c:'#c2410c'},
-    {l:'🔴 Sin Stock',v:sinStock,s:'',c:'#b91c1c'},
-    {l:'📄 Artículos',v:arts,s:'',c:'#1d4ed8'},
-  ].map(function(m){return`<div class="col"><div class="v-metric"><div class="ml">${m.l}</div><div class="mv" style="color:${m.c}">${m.v}</div>${m.s?`<div class="ms">${m.s}</div>`:''}</div></div>`;}).join('');
-  var estados=[],seenE={};
-  v_allResults.forEach(function(r){if(!seenE[r.estado]){estados.push(r.estado);seenE[r.estado]=1;}});
-  var fe=document.getElementById('v_fEst'),cur=fe.value;
-  fe.innerHTML='<option value="">Todos los estados</option>'+estados.map(function(e){return'<option'+(e===cur?' selected':'')+'>'+v_escH(e)+'</option>';}).join('');
-  v_applyFilters();
-}
-
-function v_applyFilters(){
-  var est=document.getElementById('v_fEst').value,srch=document.getElementById('v_fSearch').value.toLowerCase();
-  v_filtered=v_allResults.filter(function(r){return(!est||r.estado===est)&&(!srch||r.ref.toLowerCase().indexOf(srch)!==-1||r.titulo_cat.toLowerCase().indexOf(srch)!==-1);});
-  v_pg=0;v_renderTable();
-}
-document.getElementById('v_fEst').addEventListener('change',v_applyFilters);
-document.getElementById('v_fSearch').addEventListener('input',v_applyFilters);
-
-function v_srt(key){if(v_sortKey===key)v_sortDir*=-1;else{v_sortKey=key;v_sortDir=1;}v_filtered.sort(function(a,b){var av=a[key],bv=b[key];if(typeof av==='number')return(av-bv)*v_sortDir;return String(av).localeCompare(String(bv))*v_sortDir;});v_pg=0;v_renderTable();}
-
-function v_renderTable(){
-  var start=v_pg*V_PAGE,slice=v_filtered.slice(start,start+V_PAGE),total=v_filtered.length;
-  document.getElementById('v_cntLbl').textContent='Mostrando '+(start+1)+'–'+Math.min(start+V_PAGE,total)+' de '+total;
-  document.getElementById('v_pageLbl').textContent='Pág. '+(v_pg+1)+'/'+Math.max(1,Math.ceil(total/V_PAGE));
-  document.getElementById('v_btnPrev').disabled=v_pg===0;
-  document.getElementById('v_btnNext').disabled=start+V_PAGE>=total;
-  var bmap={'EN BIBLIOTECA':'bg-success','SIN STOCK':'bg-danger','NO ENCONTRADO':'bg-warning text-dark','ARTÍCULO CIENTÍFICO':'bg-primary'};
-  document.getElementById('v_tbody').innerHTML=slice.map(function(r){
-    var bc=bmap[r.estado]||'bg-secondary';
-    var lnk=r.link?'<a href="'+v_escH(r.link)+'" target="_blank" class="text-muted" style="font-size:.68rem;">↗</a>':'';
-    return'<tr><td style="font-size:.7rem;color:var(--muted);font-family:\'DM Mono\',monospace;">'+r.idx+'</td><td class="reftd">'+v_escH(r.ref)+'</td><td><span class="badge '+bc+'">'+v_escH(r.estado)+'</span></td><td style="font-family:\'DM Mono\',monospace;font-size:.7rem;">'+(r.ejemplares||'–')+'</td><td class="cattd">'+v_escH(r.titulo_cat)+'</td><td class="cattd">'+v_escH(r.autor_cat)+'</td><td style="font-family:\'DM Mono\',monospace;font-size:.7rem;color:var(--gold);">'+r.score+'</td><td class="obstd">'+v_escH(r.obs)+' '+lnk+'</td></tr>';
-  }).join('');
-}
-function v_prevPage(){if(v_pg>0){v_pg--;v_renderTable();}}
-function v_nextPage(){if((v_pg+1)*V_PAGE<v_filtered.length){v_pg++;v_renderTable();}}
-
-// ── Descarga resultados ────────────────────────────────────
-document.getElementById('v_btnDlAll').addEventListener('click',function(){
-  v_makeXls(v_allResults.map(function(r){return{'#':r.idx,'Referencia Original':r.ref,'Estado':r.estado,'Ejemplares':r.ejemplares,'Título en Catálogo':r.titulo_cat,'Autor Catálogo':r.autor_cat,'Score':r.score,'Observaciones':r.obs};}),'Resultados','Resultados_Biblioteca_'+v_ts()+'.xlsx');
-});
-document.getElementById('v_btnDlNoEnc').addEventListener('click',function(){
-  var d=v_allResults.filter(function(r){return r.estado==='NO ENCONTRADO'||r.estado==='SIN STOCK';});
-  if(!d.length){v_showAlert('w','No hay referencias sin encontrar.');return;}
-  v_makeXls(d.map(function(r){return{'#':r.idx,'Referencia':r.ref,'Estado':r.estado,'Observaciones':r.obs};}),'No Encontrados','No_Encontrados_'+v_ts()+'.xlsx');
-});
-function v_makeXls(data,sheet,fname){var ws=XLSX.utils.json_to_sheet(data);ws['!cols']=[{wch:4},{wch:55},{wch:22},{wch:9},{wch:40},{wch:30},{wch:7},{wch:40}];var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,sheet);XLSX.writeFile(wb,fname);}
-function v_ts(){return new Date().toISOString().slice(0,10).replace(/-/g,'');}
-
-// ── Alertas ────────────────────────────────────────────────
-function v_showAlert(t,msg){
-  var map={e:'alert-danger',w:'alert-warning',o:'alert-success'};
-  var d=document.createElement('div');d.className='alert '+(map[t]||'alert-warning')+' alert-dismissible';
-  d.innerHTML='<span>'+msg+'</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-  document.getElementById('v_alerts').appendChild(d);
-  if(t!=='e')setTimeout(function(){if(d.parentNode)d.parentNode.removeChild(d);},6000);
-}
-function v_clearAlerts(){document.getElementById('v_alerts').innerHTML='';}
-function v_escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-
-// ── Enviar al Cotizador ────────────────────────────────────
-var cotCola=[];
-function v_enviarAlCotizador(){
-  var noEnc=v_allResults.filter(function(r){return r.estado==='NO ENCONTRADO'||r.estado==='SIN STOCK';});
-  if(!noEnc.length){v_showAlert('w','No hay referencias sin encontrar para enviar.');return;}
-  cotCola=noEnc.map(function(r){
-    var p=parseRef(r.ref),titulo=r.ref;
-    var ym=r.ref.match(/\(\s*\d{4}\s*\)\.\s*(.+)/);
-    if(ym){var rest=ym[1],corte=rest.search(/\.\s+[A-ZÁÉÍÓÚ][a-z]/);titulo=corte>10?rest.slice(0,corte).trim():rest.split('.')[0].trim();}
-    var autorStr=p.surnames.length?p.surnames[0].charAt(0).toUpperCase()+p.surnames[0].slice(1):'';
-    return{ref:r.ref,titulo:titulo,autor:autorStr,cotizado:false};
   });
-  renderCola();
-  // Activar pestaña Cotizador via Bootstrap
-  var cotTab=document.getElementById('cotizador-tab');
-  if(cotTab)bootstrap.Tab.getOrCreateInstance(cotTab).show();
-  v_showAlert('o','✅ '+cotCola.length+' referencias enviadas al Cotizador.');
+  gestor_renderTabla();
+  alert(`✅ ${ag} referencia(s) enviadas al Gestor APA 7.`);
+  bandeja_refs=[];
+  bandeja_actualizarUI();
+  document.querySelector('[data-bs-target="#gestor-pane"]').click();
 }
 </script>
 
-<!-- ══════════════════════════════════════════════════════════
-     SCRIPT 5 — COTIZADOR
-══════════════════════════════════════════════════════════ -->
+
 <script>
-var cotHistorial=[];
-
-async function cotizarLibro(){
-  var isbn=document.getElementById('cot_isbn').value.trim().replace(/[-\s]/g,'');
-  var titulo=document.getElementById('cot_titulo').value.trim();
-  var autor=document.getElementById('cot_autor').value.trim();
-  var bf=document.getElementById('cot_bookfinder').checked;
-  var bl=document.getElementById('cot_buscalibre').checked;
-  var amz=document.getElementById('cot_amazon').checked;
-  var ml=document.getElementById('cot_mercadolibre').checked;
-  var intv=parseInt(document.getElementById('cot_intervalo').value)*1000;
-  if(!isbn&&!titulo){alert('Ingresa al menos el ISBN o el título.');return;}
-  var sitios=[];
-  if(bf)sitios.push({nombre:'BookFinder',url:isbn?'https://www.bookfinder.com/search/?isbn='+isbn+'&mode=basic&st=sr&ac=qr':'https://www.bookfinder.com/search/?author='+encodeURIComponent(autor)+'&title='+encodeURIComponent(titulo)+'&mode=basic&st=sr&ac=qr'});
-  if(bl)sitios.push({nombre:'BuscaLibre',url:isbn?'https://www.buscalibre.cl/libros/search?q='+isbn:'https://www.buscalibre.cl/libros/search?q='+encodeURIComponent(titulo+' '+autor)});
-  if(amz)sitios.push({nombre:'Amazon',url:isbn?'https://www.amazon.com/s?k='+isbn:'https://www.amazon.com/s?k='+encodeURIComponent(titulo+' '+autor)+'&i=stripbooks'});
-  if(ml)sitios.push({nombre:'MercadoLibre',url:isbn?'https://listado.mercadolibre.cl/'+isbn:'https://listado.mercadolibre.cl/'+encodeURIComponent(titulo+' '+autor)});
-  if(!sitios.length){alert('Selecciona al menos un sitio.');return;}
-  var prog=document.getElementById('cot_prog'),progTxt=document.getElementById('cot_prog_txt'),progFill=document.getElementById('cot_prog_fill');
-  prog.style.display='block';
-  for(var i=0;i<sitios.length;i++){
-    progTxt.textContent='Abriendo '+sitios[i].nombre+'... ('+(i+1)+'/'+sitios.length+')';
-    progFill.style.width=Math.round(((i+1)/sitios.length)*100)+'%';
-    window.open(sitios[i].url,'_blank');
-    if(i<sitios.length-1)await new Promise(function(r){setTimeout(r,intv);});
-  }
-  progTxt.textContent='✅ Completado — '+sitios.length+' sitio(s) abiertos';
-  progFill.style.width='100%';
-  setTimeout(function(){prog.style.display='none';},3500);
-  var entrada={label:titulo||isbn,isbn:isbn,titulo:titulo,autor:autor};
-  cotHistorial.unshift(entrada);if(cotHistorial.length>8)cotHistorial.pop();renderHistorial();
-}
-
-function renderCola(){
-  var wrap=document.getElementById('cot_cola_wrap'),list=document.getElementById('cot_cola_list'),badge=document.getElementById('cot_cola_badge');
-  if(!cotCola.length){wrap.style.display='none';return;}
-  wrap.style.display='block';
-  var pendientes=cotCola.filter(function(c){return!c.cotizado;}).length;
-  badge.textContent=pendientes+' pendientes / '+cotCola.length+' total';
-  list.innerHTML=cotCola.map(function(item,i){
-    var bg=item.cotizado?'#f8fafc':'#fff',tc=item.cotizado?'var(--muted)':'var(--text)';
-    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);background:'+bg+';cursor:'+(item.cotizado?'default':'pointer')+';" '+(item.cotizado?'':' onclick="cargarEnCotizador('+i+')" title="Clic para cotizar"')+'>'
-      +'<span style="font-size:16px;">'+(item.cotizado?'✅':'📖')+'</span>'
-      +'<div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:600;color:'+tc+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+item.titulo+'">'+(item.titulo.length>72?item.titulo.slice(0,72)+'…':item.titulo)+'</div>'+(item.autor?'<div style="font-size:11px;color:var(--muted);">'+item.autor+'</div>':'')+'</div>'
-      +(item.cotizado?'<span style="font-size:10.5px;color:var(--green);font-weight:600;">Cotizado</span>':'<button onclick="event.stopPropagation();cargarEnCotizador('+i+')" style="font-size:11px;color:var(--accent);background:var(--accent-lt);border:1px solid #bfdbfe;border-radius:5px;padding:4px 12px;cursor:pointer;white-space:nowrap;font-weight:600;">Cotizar →</button>')
-      +'</div>';
-  }).join('');
-}
-
-function cargarEnCotizador(i){
-  var item=cotCola[i];
-  document.getElementById('cot_isbn').value='';
-  document.getElementById('cot_titulo').value=item.titulo;
-  document.getElementById('cot_autor').value=item.autor;
-  cotCola[i].cotizado=true;renderCola();
-  document.getElementById('cot_isbn').scrollIntoView({behavior:'smooth',block:'center'});
-  setTimeout(cotizarLibro,300);
-}
-
-async function cotizarTodaLaCola(){
-  var pendientes=cotCola.filter(function(c){return!c.cotizado;});
-  if(!pendientes.length){alert('Todos los libros ya fueron cotizados.');return;}
-  if(!confirm('Se abrirán pestañas para '+pendientes.length+' libros. ¿Continuar?'))return;
-  var intv=parseInt(document.getElementById('cot_intervalo').value)*1000;
-  for(var i=0;i<cotCola.length;i++){
-    if(cotCola[i].cotizado)continue;
-    document.getElementById('cot_titulo').value=cotCola[i].titulo;
-    document.getElementById('cot_autor').value=cotCola[i].autor;
-    document.getElementById('cot_isbn').value='';
-    cotCola[i].cotizado=true;renderCola();
-    await cotizarLibro();
-    if(i<cotCola.length-1)await new Promise(function(r){setTimeout(r,intv+500);});
-  }
-}
-
-function limpiarCola(){cotCola=[];renderCola();}
-
-function renderHistorial(){
-  var wrap=document.getElementById('cot_historial_wrap'),list=document.getElementById('cot_historial_list');
-  if(!cotHistorial.length){wrap.style.display='none';return;}
-  wrap.style.display='block';
-  list.innerHTML=cotHistorial.map(function(h,i){
-    return'<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);"><span style="font-size:12.5px;color:var(--text);">'+h.label+(h.autor?' <span style="color:var(--muted);font-size:11px;">· '+h.autor+'</span>':'')+'</span><button onclick="cotizarDesdeHistorial('+i+')" style="font-size:11px;color:var(--accent);background:none;border:1px solid var(--border);border-radius:5px;padding:3px 10px;cursor:pointer;">↻ Buscar</button></div>';
-  }).join('');
-}
-
-function cotizarDesdeHistorial(i){
-  var h=cotHistorial[i];
-  document.getElementById('cot_isbn').value=h.isbn||'';
-  document.getElementById('cot_titulo').value=h.titulo||'';
-  document.getElementById('cot_autor').value=h.autor||'';
-  cotizarLibro();
-}
-</script>
-
-<!-- ══════════════════════════════════════════════════════════
-     SCRIPT 6 — DISPONIBILIDAD PUCV (manual)
-══════════════════════════════════════════════════════════ -->
-<script>
-var disp_items=[];
-var OPAC_BASE='https://catalogo.pucv.cl/cgi-bin/koha/opac-search.pl?q=';
-var DISP_ESTADOS={sin:{label:'⬜ Sin verificar',cls:''},disponible:{label:'✅ Disponible',cls:'table-success'},prestado:{label:'🟡 Prestado / Revisar',cls:'table-warning'},noesta:{label:'🔴 No está en catálogo',cls:'table-danger'}};
-
-function disp_agregarManual(){
-  var titulo=document.getElementById('disp_titulo').value.trim();
-  var autor=document.getElementById('disp_autor').value.trim();
-  var anio=document.getElementById('disp_anio').value.trim();
-  if(!titulo)return alert('El título es obligatorio.');
-  disp_items.push({titulo,autor,anio,estado:'sin'});
-  document.getElementById('disp_titulo').value='';document.getElementById('disp_autor').value='';document.getElementById('disp_anio').value='';
-  disp_renderTabla();
-}
-
-function disp_cargarDesdeGestor(){
-  if(!gestor_refs.length)return alert('El Gestor no tiene referencias cargadas aún.');
-  var ag=0;
-  gestor_refs.forEach(r=>{
-    const ref=r.Referencia||'',rl=ref.replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim();
-    const mA=rl.match(/^\s*([^(]+)\s*\(/),autor=mA?mA[1].trim():'';
-    const mY=rl.match(/\((\d{4})\)/),anio=mY?mY[1]:'';
-    const mH=ref.match(/<i>([^<]+)<\/i>/);let titulo=mH?mH[1].trim():'';
-    if(!titulo){const da=rl.replace(/^.+?\(\d{4}\)[.:\s–\-]+/,'');const c=da.search(/\.\s+[A-Z][a-z]/);titulo=c>0?da.substring(0,c).trim():da.split(/[.:]/)[0].trim();}
-    if(!titulo)titulo=rl.replace(/^[^(]+\(\d{4}\)\.\s*/,'').substring(0,100);
-    if(!titulo)return;
-    const tn=titulo.toLowerCase().replace(/\s+/g,' ');
-    if(!disp_items.some(i=>i.titulo.toLowerCase().replace(/\s+/g,' ')===tn)){disp_items.push({titulo,autor,anio,estado:'sin'});ag++;}
-  });
-  disp_renderTabla();alert(`✅ ${ag} libro(s) importados desde el Gestor.`);
-}
-
-function disp_construirQuery(titulo,autor){
-  const stopwords=new Set(['de','la','le','les','du','des','el','los','las','the','a','an','en','et','of','in','sur','d','y','con','por','un','una','al','del']);
-  function norm2(t){return t.replace(/[''´`]/g,' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
-  const apellido=autor?norm2(autor.split(',')[0].trim()):'';
-  const palabras=norm2(titulo).split(' ').filter(p=>p.length>3&&!stopwords.has(p.toLowerCase())).slice(0,1);
-  return[apellido,...palabras].filter(Boolean).join(' & ');
-}
-
-function disp_buscarEnCatalogo(idx){
-  const item=disp_items[idx];
-  const url=OPAC_BASE+encodeURIComponent(disp_construirQuery(item.titulo,item.autor));
-  window.open(url,'_blank');
-}
-
-function disp_setEstado(idx,estado){disp_items[idx].estado=estado;disp_renderTabla();}
-function disp_eliminar(idx){disp_items.splice(idx,1);disp_renderTabla();}
-
-function disp_renderTabla(){
-  const tbody=document.getElementById('disp_tbody');tbody.innerHTML='';
-  if(!disp_items.length){tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted py-4">Aún no hay libros en la lista.</td></tr>';document.getElementById('disp_resumen').style.display='none';return;}
-  disp_items.forEach((item,idx)=>{
-    const ei=DISP_ESTADOS[item.estado];
-    tbody.innerHTML+=`<tr class="${ei.cls}"><td><strong>${item.titulo}</strong></td><td>${item.autor||'<span class="text-muted">—</span>'}</td><td>${item.anio||'<span class="text-muted">—</span>'}</td><td><button class="btn btn-sm btn-outline-primary w-100" onclick="disp_buscarEnCatalogo(${idx})">🔍 Buscar</button></td><td><select class="form-select form-select-sm" onchange="disp_setEstado(${idx},this.value)"><option value="sin" ${item.estado==='sin'?'selected':''}>⬜ Sin verificar</option><option value="disponible" ${item.estado==='disponible'?'selected':''}>✅ Disponible</option><option value="prestado" ${item.estado==='prestado'?'selected':''}>🟡 Prestado</option><option value="noesta" ${item.estado==='noesta'?'selected':''}>🔴 No está</option></select></td><td class="text-center"><button class="btn btn-sm btn-danger" onclick="disp_eliminar(${idx})">✕</button></td></tr>`;
-  });
-  const cnts={disponible:0,prestado:0,noesta:0,sin:0};
-  disp_items.forEach(i=>cnts[i.estado]++);
-  document.getElementById('disp_cnt_disponible').textContent=cnts.disponible;
-  document.getElementById('disp_cnt_prestado').textContent=cnts.prestado;
-  document.getElementById('disp_cnt_noesta').textContent=cnts.noesta;
-  document.getElementById('disp_cnt_sin').textContent=cnts.sin;
-  document.getElementById('disp_resumen').style.display='block';
-}
-
-function disp_exportarExcel(){
-  if(!disp_items.length)return alert('No hay datos.');
-  const et={sin:'Sin verificar',disponible:'Disponible',prestado:'Prestado / Revisar',noesta:'No está en catálogo'};
-  const datos=disp_items.map(i=>({'Título':i.titulo,'Autor':i.autor||'','Año':i.anio||'','Disponibilidad':et[i.estado],'URL Catálogo':OPAC_BASE+encodeURIComponent(disp_construirQuery(i.titulo,i.autor))}));
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(datos),'Disponibilidad PUCV');XLSX.writeFile(wb,'Disponibilidad_Bibliografica_PUCV.xlsx');
-}
 // ── Edición inline de referencias ────────────────────────────────────────────
 let _editRefIdx = -1;
 let _editRefModal = null;
