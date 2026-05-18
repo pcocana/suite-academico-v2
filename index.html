@@ -462,6 +462,44 @@ body{background:var(--cream);font-family:'Inter','Segoe UI',sans-serif;color:var
   </div>
 </div>
 
+
+<!-- ── Modal Formateador de Referencias ── -->
+<div class="modal fade" id="fmtModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--navy);">
+        <h5 class="modal-title text-white">&#x1F500; Formatear referencia</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label fw-bold small text-muted text-uppercase">Referencia original</label>
+          <div id="fmtOriginal" class="border rounded p-2 bg-light" style="font-size:13px;"></div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold small text-muted text-uppercase">Norma de salida</label>
+          <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-sm btn-primary fmtNormaBtn" data-n="apa7">APA 7</button>
+            <button class="btn btn-sm btn-outline-secondary fmtNormaBtn" data-n="ieee">IEEE</button>
+            <button class="btn btn-sm btn-outline-secondary fmtNormaBtn" data-n="vancouver">Vancouver</button>
+            <button class="btn btn-sm btn-outline-secondary fmtNormaBtn" data-n="chicago">Chicago</button>
+            <button class="btn btn-sm btn-outline-secondary fmtNormaBtn" data-n="mla">MLA</button>
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label fw-bold small text-muted text-uppercase">Resultado</label>
+          <div id="fmtResultado" class="border rounded p-2" style="font-size:14px;line-height:1.8;min-height:48px;background:#f8fff8;border-color:#5dcaa5 !important;"></div>
+        </div>
+        <div id="fmtAvisos" class="text-warning small mt-1" style="display:none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-success" onclick="fmt_aplicar()">&#x2714; Reemplazar referencia</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- ══════════════════════════════════════════════════════════
@@ -1301,6 +1339,7 @@ function ext_updateView(){
         <td style="white-space:nowrap;">
           <button class="btn btn-xs btn-outline-secondary btn-sm py-0 px-1 me-1" style="font-size:.7rem;" title="Editar referencia" onclick="ext_editarRef(${d.idx},this.closest('tr').querySelector('.ref-cell'))">✏️</button>
           <button class="btn btn-xs btn-outline-warning btn-sm py-0 px-1 me-1" style="font-size:.7rem;" title="Partir en dos referencias" onclick="ext_partirRef(${d.idx})">✂️</button>
+          <button class="btn btn-xs btn-outline-success btn-sm py-0 px-1 me-1" style="font-size:.7rem;" title="Formatear referencia" onclick="fmt_abrir(${d.idx},ext_datos[${d.idx}].ref)">🔀</button>
           <button class="btn btn-xs btn-outline-danger btn-sm py-0 px-1" style="font-size:.7rem;" title="Eliminar esta referencia" onclick="ext_eliminarUna(${d.idx})">✕</button>
         </td>
       </tr>`;
@@ -1676,6 +1715,330 @@ function ext_eliminarUna(idx){
   if(!confirm('¿Eliminar esta referencia?')) return;
   ext_datos.splice(idx, 1);
   ext_updateView();
+}
+
+</script>
+<script>
+// ══════════════════════════════════════════════════════════
+//  FORMATEADOR DE REFERENCIAS v8 · Biblioteca PUCV
+// ══════════════════════════════════════════════════════════
+(function(){
+var ED=['McGraw','Mc Graw','Mc-Graw','Prentice','Wiley','Springer','Elsevier','Oxford',
+  'Cambridge','Pearson','CRC','Taylor','Interamericana','Toray','Masson','Limusa',
+  'Trillas','Paraninfo','Marcombo','Revert','Editorial','Fondo de Cultura','UNAM',
+  'Ariel','Anaya','Routledge','Sage','SAGE','MIT Press','Harvard','Princeton',
+  'Academic','Cengage','Norton','Free Press','Van Nostrand','Houghton','Heinemann',
+  'Blackwell','Guilford','McGraw-Hill','Prentice Hall','Basic Books','Springer-Verlag',
+  'Addison-Wesley','Addison Wesley','University of','Macmillan','Panamericana',
+  'Salvat','Gedisa','Alianza','Churchill','Mosby','Lippincott','Saunders'];
+var CI=['Mexico','Madrid','Barcelona','Buenos Aires','Santiago','Bogota','Lima',
+  'New York','London','Boston','Chicago','Paris','Berlin','Amsterdam','Washington',
+  'Toronto','Sydney','Beijing','Englewood','Thousand Oaks','Upper Saddle River'];
+var ROLES='Coordinador|Coordinadora|Editor|Editora|Compilador|Compiladora|Director|Directora|Coord|Comp|Dir|Traductor|Traductora|Coordinador Editorial|Editor General';
+var ABREV=['Jr','Sr','Dr','Mr','Mrs','Ms','Prof','Vol','Ed','Eds','Rev','No','Fig','pp','vs'];
+
+function _n(s){return(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+function _esEdInicio(s){var sn=_n(s.trim());return ED.concat(CI).some(function(e){return sn.indexOf(_n(e))===0;});}
+function _esEdEnTexto(s){var sn=_n(s);return ED.concat(CI).some(function(e){return sn.indexOf(_n(e))!==-1;});}
+function _cap(s){
+  if(!s)return'';s=s.trim();
+  if(s===s.toUpperCase()&&s.length>3)return s[0].toUpperCase()+s.slice(1).toLowerCase();
+  return s[0].toUpperCase()+s.slice(1);
+}
+function _prot(t){ABREV.forEach(function(a){t=t.replace(new RegExp('\\b'+a+'\\.','g'),a+'\x00');});return t;}
+function _rest(t){return(t||'').replace(/\x00/g,'.');}
+function _limRoles(s){return s.replace(new RegExp(',\\s*('+ROLES+')[^,]*$','i'),'').trim();}
+
+// ── split inteligente ────────────────────────────────────
+function _split(texto){
+  var t=re_sub(/\s*:\s+/,'. ',_prot(texto));
+  var raw=t.split(/\.\s+/);
+  var res=[],seg=raw[0]||'';
+  for(var i=1;i<raw.length;i++){
+    var p=raw[i];if(!seg){seg=p;continue;}
+    var ult=seg[seg.length-1];
+    var isLow=function(c){return c>='a'&&c<='z'||'áéíóúñü'.indexOf(c)!==-1;};
+    if(isLow(ult)||/\d$/.test(ult)){res.push(_rest(seg));seg=p;}
+    else if(ult>='A'&&ult<='Z'){
+      if(/\b[A-Z]$/.test(seg)){seg+='. '+p;}
+      else if((p.match(/\b[a-z\u00e0-\u00ff]{3,}\b/g)||[]).length>=2||_esEdInicio(p)){res.push(_rest(seg));seg=p;}
+      else{seg+='. '+p;}
+    } else{res.push(_rest(seg));seg=p;}
+  }
+  if(seg)res.push(_rest(seg));
+  return res.filter(function(x){return x.trim();});
+}
+function re_sub(pat,rep,s){return(s||'').replace(pat,rep);}
+
+// ── autor token ──────────────────────────────────────────
+function _esTokAut(s){
+  s=(s||'').trim().replace(/\.+$/,'');
+  if(!s||s.length<2)return false;
+  var wd='[\\wáéíóúñÁÉÍÓÚÑ\\-]';
+  if(/^[A-Z](\.[A-Z])?$/.test(s))return true;                                     // A.B
+  if(new RegExp('^[A-Z](\\.[A-Z])?\\.?\\s+[A-Z]'+wd+'+').test(s))return true;     // A. Apellido
+  if(new RegExp('^([A-Z]'+wd+'+\\s+)*[A-Z]'+wd+'+\\s+[A-Z](\\.[A-Z])?$').test(s))return true; // Ape Ini
+  if(/^[A-Z][a-záéíóúñÁÉÍÓÚÑ\-]{2,}$/.test(s))return true;                        // Apellido
+  if(/^[A-Z][a-záéíóúñÁÉÍÓÚÑ]+\s+[A-Z][a-záéíóúñÁÉÍÓÚÑ\-]+(\s+[A-Z][a-záéíóúñÁÉÍÓÚÑ\-]+)?$/.test(s))return true; // Nom Ape[Ape]
+  return false;
+}
+function _esAutSeg(s){
+  s=s.trim();
+  if(!s)return false;
+  s=s.replace(/\s+(y\s+otros|et\s+al\.?|y\s+col\.?)/gi,'').trim();
+  if(!s)return false;
+  if(/[+=:@0-9]/.test(s))return false;
+  if((s.match(/\b[a-záéíóúñ]{4,}\b/g)||[]).length>=2)return false;
+  var partes=s.split(/\s+(?:and|y)\s+|\s*[&;]\s*/i);
+  for(var k=0;k<partes.length;k++){
+    var p=partes[k].trim();if(!p)continue;
+    var toks=p.split(/,\s*/);
+    for(var j=0;j<toks.length;j++){
+      if(toks[j].trim()&&!_esTokAut(toks[j]))return false;
+    }
+  }
+  return true;
+}
+
+// ── extraer autores de bloque ────────────────────────────
+function _autores(bloque){
+  var out=[];
+  if(!bloque)return out;
+  bloque=_limRoles(bloque);
+  bloque=bloque.replace(/\s+(y\s+otros|et\s+al\.?|y\s+col\.?)/gi,'').trim();
+  var segs=bloque.split(/\s*[&;]\s*|\s+and\s+|\s+y\s+/i);
+  segs.forEach(function(seg){
+    seg=_limRoles(seg.trim());if(!seg)return;
+    var toks=seg.split(/,\s*/);var i=0;
+    while(i<toks.length){
+      var tk=toks[i].trim();if(!tk){i++;continue;}
+      if(i+1<toks.length&&/^[A-Z](\.[A-Z])?\.?$/.test(toks[i+1].trim())){
+        var a=_tokToAut(tk+' '+toks[i+1].trim());if(a)out.push(a);i+=2;
+      } else{var a=_tokToAut(tk);if(a)out.push(a);i++;}
+    }
+  });
+  return out;
+}
+function _tokToAut(s){
+  if(!s)return null;
+  s=s.trim().replace(/\.+$/,'').replace(/\s+(Jr|Sr)$/,'').trim();
+  if(!s||s.length<2)return null;
+  var m;
+  m=s.match(/^([A-Z](?:\.[A-Z])?\.?)\s+([A-Z][\wáéíóúñÁÉÍÓÚÑ\-]+(?:\s+[A-Z][\wáéíóúñÁÉÍÓÚÑ\-]+)?)$/);
+  if(m)return{ap:m[2].trim(),ini:m[1].replace(/\.+$/,'')+'.'};
+  m=s.match(/^((?:[A-Z][\wáéíóúñÁÉÍÓÚÑ\-]+|[a-z]{2,4})(?:\s+(?:[A-Z][\wáéíóúñÁÉÍÓÚÑ\-]+|[a-z]{2,4}))*)\s+([A-Z](?:\.[A-Z])?)$/);
+  if(m)return{ap:m[1].trim(),ini:m[2].replace(/\.+$/,'')+'.'};
+  m=s.match(/^([A-Z][a-záéíóúñÁÉÍÓÚÑ]+)\s+([A-Z][a-záéíóúñÁÉÍÓÚÑ\-]+)\s+([A-Z][a-záéíóúñÁÉÍÓÚÑ\-]+)$/);
+  if(m)return{ap:m[2]+' '+m[3],ini:m[1][0]+'.'};
+  m=s.match(/^([A-Z][a-záéíóúñÁÉÍÓÚÑ]+)\s+([A-Z][a-záéíóúñÁÉÍÓÚÑ\-]+)$/);
+  if(m)return{ap:m[2],ini:m[1][0]+'.'};
+  if(/^[A-Z][a-záéíóúñÁÉÍÓÚÑ\-]{2,}$/.test(s))return{ap:s,ini:''};
+  return null;
+}
+
+// ── separar por coma (formato CS) ────────────────────────
+function _sepComa(texto){
+  texto=texto.replace(/\s+(y\s+otros|et\s+al\.?|y\s+col\.?)/gi,'').trim();
+  texto=texto.replace(/\s*:\s+/g,', ');
+  var ps=texto.split(/,\s*/).map(function(p){return p.trim();}).filter(Boolean);
+  var aut=[],tit='',i=0;
+  while(i<ps.length){
+    if(_esAutSeg(ps[i])){
+      ps[i].split(/\s+(?:and|y)\s+|\s*[&;]\s*/i).forEach(function(seg){
+        seg.split(/,\s*/).forEach(function(tk){
+          var a=_tokToAut(tk.trim());if(a)aut.push(a);
+        });
+      });
+      i++;
+    } else break;
+  }
+  if(i<ps.length){tit=_cap(ps[i].replace(/\.+$/,''));i++;}
+  return{aut:aut,tit:tit,resto:ps.slice(i)};
+}
+
+// ── editorial y ciudad ───────────────────────────────────
+function _limEd(texto){
+  var tn=_n(texto),mejor=texto.length;
+  ED.concat(CI).forEach(function(e){
+    var en=_n(e),idx=tn.indexOf(en);
+    if(idx!==-1){
+      var pre=texto.slice(0,idx);
+      var s=Math.max(pre.lastIndexOf('. ')+2,pre.lastIndexOf(': ')+2,0);
+      if(s===1)s=idx;
+      if(s>0&&s<mejor)mejor=s; else if(idx<mejor)mejor=idx;
+    }
+  });
+  return mejor;
+}
+function _asigEd(ps,c){
+  var ok=false;
+  var ABREV_ED=/^(Ed|Eds|Edit|Trad|Comp|Dir|Coord)\.?$/i;
+  (ps||[]).forEach(function(p){
+    p=(p||'').replace(/^[,.\s:]+|[,.\s]+$/g,'');
+    if(!p||/^\d{1,4}$/.test(p)||ABREV_ED.test(p))return;
+    // Quitar prefijo 'Ed. ' o 'Editorial ' del nombre de editorial
+    p=p.replace(/^Ed\.\s+/i,'').replace(/^Edit(?:orial)?\s+/i,'').trim();
+    if(!p)return;
+    CI.forEach(function(ci){if(_n(p).indexOf(_n(ci))!==-1&&!c.ci)c.ci=ci;});
+    if(!ok){c.ed=p;ok=true;}
+  });
+}
+
+// ══ PARSER ════════════════════════════════════════════════
+window.fmt_parsear=function(texto){
+  // Normalizar todos los tipos de comillas a ASCII
+  var t=(texto||'').trim()
+    .replace(/[\u201c\u201d\u2018\u2019\u00ab\u00bb\u2039\u203a]/g,'"')
+    .replace(/\s+/g,' ');
+  var c={aut:[],anio:'',tit:'',ed:'',ci:'',edicion:'',isbn:'',doi:'',avisos:[]};
+  var m;
+  // ISBN / DOI
+  t=t.replace(/\.?\s*ISBN[:\s]*([\d\-xX]+)/i,function(_,v){c.isbn=v;return'';});
+  t=t.replace(/\.?\s*doi[:\s]*(\S+)/i,function(_,v){c.doi=v;return'';});
+  // Año
+  m=t.match(/\((\d{4})\)/);
+  if(m){c.anio=m[1];t=t.replace(m[0],'');}
+  else{m=t.match(/,\s*(1[89]\d{2}|20\d{2})\s*\.?\s*$/);if(m){c.anio=m[1];t=t.replace(m[0],'');}}
+  if(!c.anio){m=t.match(/\b(1[89]\d{2}|20\d{2})\b/);if(m)c.anio=m[1];}
+  // Edición
+  m=t.match(/\(?\s*(\d+[aª°]?\s*[Ee]d(?:ici[oó]n|\.)?)[\s)]*\.?/i);
+  if(m){c.edicion=m[1].trim();t=t.replace(m[0],'');}
+  // Limpiar
+  t=t.replace(/\([^)]{3,60}\)/g,'').replace(/\.\s*\./g,'. ').replace(/\s+/g,' ').trim();
+
+  // A: título entre comillas
+  m=t.match(/^"([^"]+)"/);
+  if(m){
+    c.tit=_cap(m[1].trim());
+    var r=t.slice(m[0].length).replace(/^[,.\s:]+/,'');
+    var ps=_split(r);
+    if(ps.length){c.aut=_autores(ps[0]);_asigEd(ps.slice(1),c);}
+    return _fmt(c);
+  }
+  // B: "Ape Ini., Ape2 Ini2. Título..."
+  var pmB=t.match(/^((?:[A-Z][\wáéíóúñÁÉÍÓÚÑ\-]*(?:\s+[a-z]{2,4})?\s+[A-Z](?:\.[A-Z])?\.(?:,\s*)?)+)/);
+  if(pmB){
+    var blq=pmB[1].trim().replace(/[.,\s]+$/,'');
+    var rest=t.slice(pmB[0].length).trim();
+    c.aut=_autores(blq);
+    var ps=_split(rest);
+    if(ps.length&&!_esEdInicio(ps[0])){c.tit=_cap(ps[0]);_asigEd(ps.slice(1),c);}
+    else _asigEd(ps,c);
+    return _fmt(c);
+  }
+  // C: "Apellido, Ini. Título..."
+  var pmC=t.match(/^([A-Z][a-z\u00e0-\u00ff\-]+,\s+[A-Z](?:\.[A-Z])?\.)\s+(.+)$/);
+  if(pmC){
+    c.aut=_autores(pmC[1].replace(/\.+$/,''));
+    var ps=_split(pmC[2]).filter(function(p){return p.trim();});
+    if(ps.length&&!_esEdInicio(ps[0])){c.tit=_cap(ps[0]);_asigEd(ps.slice(1),c);}
+    else _asigEd(ps,c);
+    return _fmt(c);
+  }
+  // D: split por editorial
+  var posEd=_limEd(t);
+  var blqAT=t.slice(0,posEd).replace(/[,.\s]+$/,'');
+  var blqEd=t.slice(posEd).replace(/^[,.\s:]+/,'');
+  var ps=_split(blqAT);
+  if(ps.length>=2){
+    c.aut=_autores(ps[0]);c.tit=_cap(ps[1]);
+    _asigEd(ps.slice(2).concat(blqEd?[blqEd]:[]),c);
+    return _fmt(c);
+  }
+  // E: separación por coma (formato CS/ingeniería)
+  var sc=_sepComa(blqAT+(blqEd?','+blqEd:''));
+  if(sc.aut.length||sc.tit){
+    c.aut=sc.aut;c.tit=sc.tit;_asigEd(sc.resto,c);
+    return _fmt(c);
+  }
+  // Fallback
+  if(blqAT&&!_esEdInicio(blqAT))c.tit=_cap(blqAT);
+  if(blqEd)_asigEd([blqEd],c);
+  return _fmt(c);
+};
+
+function _fmt(c){
+  // Convertir formato interno {aut,tit,ed,ci} al externo {autores,titulo,editorial,ciudad}
+  if(!c.tit)c.avisos.push('\u26a0 T\u00edtulo no detectado');
+  if(!c.aut.length)c.avisos.push('\u26a0 Autores no detectados');
+  if(!c.anio)c.avisos.push('\u26a0 A\u00f1o no encontrado');
+  return{autores:c.aut.map(function(a){return{apellido:a.ap,iniciales:a.ini||''};}),
+    titulo:c.tit,editorial:c.ed,ciudad:c.ci,anio:c.anio,edicion:c.edicion,
+    isbn:c.isbn,doi:c.doi,avisos:c.avisos};
+}
+
+// ══ FORMATEADORES ═════════════════════════════════════════
+window.fmt_formatear=function(c,norma){
+  var an=c.anio||'s.f.',ti=c.titulo||'[T\u00edtulo no detectado]',
+      ed=c.editorial||'[Editorial]',edic=c.edicion?' ('+c.edicion+')':'',
+      ciu=c.ciudad?c.ciudad+': ':'',doi=c.doi?' https://doi.org/'+c.doi:'',l=c.autores||[];
+  function A(l){if(!l.length)return'[Autor]';
+    var f=l.map(function(a){return a.iniciales?a.apellido+', '+a.iniciales:a.apellido;});
+    if(f.length===1)return f[0];if(f.length===2)return f.join(', &amp; ');
+    return f.slice(0,-1).join(', ')+', &amp; '+f[f.length-1];}
+  function I(l){if(!l.length)return'[Autor]';
+    var f=l.map(function(a){return a.iniciales?a.iniciales+' '+a.apellido:a.apellido;});
+    if(f.length===1)return f[0];if(f.length===2)return f.join(' and ');
+    return f.slice(0,-1).join(', ')+', and '+f[f.length-1];}
+  function V(l){if(!l.length)return'[Autor]';
+    var f=l.map(function(a){var i=a.iniciales?a.iniciales.replace(/\./g,''):'';return(a.apellido+' '+i).trim();});
+    return f.length>6?f.slice(0,6).join(', ')+', et al':f.join(', ');}
+  function C(l){if(!l.length)return'[Autor]';
+    var f=l.map(function(a,i){return i===0?(a.iniciales?a.apellido+', '+a.iniciales:a.apellido):(a.iniciales?a.iniciales+' '+a.apellido:a.apellido);});
+    if(f.length===1)return f[0];if(f.length===2)return f.join(', and ');
+    return f.slice(0,-1).join(', ')+', and '+f[f.length-1];}
+  function M(l){if(!l.length)return'[Autor]';
+    if(l.length===1)return l[0].iniciales?l[0].apellido+', '+l[0].iniciales:l[0].apellido;
+    if(l.length===2){var p1=l[0].iniciales?l[0].apellido+', '+l[0].iniciales:l[0].apellido,
+      p2=l[1].iniciales?l[1].iniciales+' '+l[1].apellido:l[1].apellido;return p1+', and '+p2;}
+    return(l[0].iniciales?l[0].apellido+', '+l[0].iniciales:l[0].apellido)+', et al.';}
+  if(norma==='apa7') return A(l)+' ('+an+'). <em>'+ti+edic+'</em>. '+ed+'.'+doi;
+  if(norma==='ieee') return I(l)+', <em>'+ti+edic+'</em>. '+ciu+ed+', '+an+'.';
+  if(norma==='vancouver') return V(l)+'. <em>'+ti+'</em>'+edic+'. '+ciu+ed+'; '+an+'.';
+  if(norma==='chicago') return C(l)+'. <em>'+ti+edic+'</em>. '+ciu+ed+', '+an+'.';
+  if(norma==='mla') return M(l)+'. <em>'+ti+edic+'</em>. '+ed+', '+an+'.';
+  return '';
+};
+})();
+
+
+// ── Lógica del modal formateador (index5) ──────────────────
+var _fmtIdx=null, _fmtNorma='apa7', _fmtComp=null;
+
+function fmt_abrir(idx, textoRef){
+  _fmtIdx=idx; _fmtNorma='apa7'; _fmtComp=fmt_parsear(textoRef);
+  document.getElementById('fmtOriginal').textContent=textoRef;
+  document.querySelectorAll('.fmtNormaBtn').forEach(function(b){
+    b.className='btn btn-sm '+(b.dataset.n===_fmtNorma?'btn-primary':'btn-outline-secondary')+' fmtNormaBtn';
+  });
+  _fmt_render();
+  new bootstrap.Modal(document.getElementById('fmtModal')).show();
+}
+
+function _fmt_render(){
+  var res=fmt_formatear(_fmtComp,_fmtNorma);
+  document.getElementById('fmtResultado').innerHTML=res;
+  var av=document.getElementById('fmtAvisos');
+  if(_fmtComp.avisos&&_fmtComp.avisos.length){av.textContent=_fmtComp.avisos.join(' \u00b7 ');av.style.display='block';}
+  else av.style.display='none';
+}
+
+document.addEventListener('click',function(e){
+  var btn=e.target.closest('.fmtNormaBtn');
+  if(!btn)return;
+  _fmtNorma=btn.dataset.n;
+  document.querySelectorAll('.fmtNormaBtn').forEach(function(b){
+    b.className='btn btn-sm '+(b.dataset.n===_fmtNorma?'btn-primary':'btn-outline-secondary')+' fmtNormaBtn';
+  });
+  _fmt_render();
+});
+
+function fmt_aplicar(){
+  if(_fmtIdx===null)return;
+  var sinHtml=document.getElementById('fmtResultado').innerText;
+  ext_datos[_fmtIdx].ref=sinHtml;
+  bootstrap.Modal.getInstance(document.getElementById('fmtModal')).hide();
+  ext_renderTabla();
 }
 
 </script>
