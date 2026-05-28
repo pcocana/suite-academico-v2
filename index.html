@@ -1816,12 +1816,30 @@ function fichaXls_limpiarRef(texto){
 
   // NUEVO: eliminar prefijo temático concatenado antes del primer autor
   // Caso: "Revisiones y estado del arte Rendueles, E., ..."
-  // El prefijo: solo minúsculas/espacios/guión (sin mayúsculas internas ni dígitos)
-  // seguido de: Apellido, Inicial.  (patrón inequívoco de autor APA)
   var hm=texto.match(/^([A-ZÁÉÍÓÚÑÜ][a-záéíóúñü\s\-]{8,60}?)\s{1,4}(?=[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{3,},\s[A-Z]\.)/);
   if(hm && !/(?:19|20)\d{2}/.test(hm[1]) && !/[A-Z]\.\s/.test(hm[1])){
     texto=texto.slice(hm[1].length).trim();
   }
+
+  // NUEVO: eliminar sufijo temático cuando hay punto antes del título
+  // Caso: "...Journal of Food Engineering, 76(4), 431–444. Fundamentos biofísicos (electroporación)"
+  texto=texto.replace(/([.])\s{1,3}([A-ZÁÉÍÓÚÑÜ][a-záéíóúñü\s\-()\-]{4,70})$/, function(m, punto, sufijo){
+    if(!/(?:19|20)\d{2}/.test(sufijo) && !/[A-Z]\./.test(sufijo)){
+      return punto;
+    }
+    return m;
+  });
+
+  // NUEVO: eliminar sufijo temático cuando la referencia termina con URL o DOI (sin punto separador)
+  // Caso: "...doi.org/10.1016/j.jclepro.2013.10.051 Ingeniería de procesos"
+  // Caso: "...Handbook_on_Life_Cycle_Assessment.pdf Huella de carbono en alimentos"
+  // Caso: "...acssuschemeng.6b02399 Valorización de subproductos"
+  texto=texto.replace(/([a-z0-9])\s{1,3}([A-ZÁÉÍÓÚÑÜ][a-záéíóúñü\s\-()\-]{4,70})$/, function(m, ult, sufijo){
+    if(!/(?:19|20)\d{2}/.test(sufijo) && !/[A-Z]\./.test(sufijo)){
+      return ult;
+    }
+    return m;
+  });
 
   // Debe tener año 4 dígitos (1900–2099)
   if(!/(?:19|20)\d{2}/.test(texto))return null;
