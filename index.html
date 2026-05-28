@@ -1880,7 +1880,7 @@ function fichaXls_renderizar(filename,totalRefs,totalAsign){
     </div>
     ${resumenHtml}
     <div class="d-flex gap-2 mb-3 flex-wrap">
-      <button class="btn btn-primary" onclick="fichaXls_enviarABandeja()">🗂️ Enviar a Bandeja de Clasificación (${totalRefs})</button>
+      <button class="btn btn-primary" onclick="fichaXls_enviarAlExtractor()">📂 Enviar al Extractor Masivo (${totalRefs})</button>
       <button class="btn btn-success" onclick="fichaXls_exportarExcel()">📥 Descargar Excel limpio</button>
     </div>
     ${tablaHtml}`;
@@ -1891,25 +1891,36 @@ function fichaXls_esc(t){
   return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// Enviar a Bandeja (igual que ext_enviarAlGestor pero desde fichaXls_datos)
-function fichaXls_enviarABandeja(){
+// Enviar al Extractor Masivo (para editar, eliminar y descargar Excel)
+function fichaXls_enviarAlExtractor(){
   if(!fichaXls_datos.length){alert('No hay referencias para enviar.');return;}
+  const nombreArchivo=fichaXls_datos[0].archivo;
+
+  // Registrar como "archivo" en el extractor para que aparezca en el panel de archivos
+  if(!ext_archivos[nombreArchivo]){
+    if(!ext_ordenArchivos.includes(nombreArchivo))ext_ordenArchivos.push(nombreArchivo);
+    ext_archivos[nombreArchivo]={nombre:nombreArchivo,estado:'ok',refs:fichaXls_datos.length,msg:'',tipo:'Excel'};
+    ext_filesProcesados.add(nombreArchivo);
+  }
+
+  // Inyectar referencias al array del extractor (mismo formato que docx/pdf)
   fichaXls_datos.forEach(function(d){
-    bandeja_refs.push({
+    ext_datos.push({
+      archivo:d.archivo,
       carrera:d.carrera||'',
       clave:d.clave||'',
-      asignatura:d.asignatura||'',
+      nombre:d.asignatura||'',
       tipo:d.tipo||'Básica',
       ref:d.ref,
-      isbn:'',
-      obs:d.status&&d.status.level!=='success'?d.status.msg:'',
-      fuente:'excel',
       status:d.status||{level:'ok',msg:''}
     });
   });
-  bandeja_actualizarUI();
-  alert('✅ '+fichaXls_datos.length+' referencias enviadas a la Bandeja de Clasificación.');
-  document.querySelector('[data-bs-target="#bandeja-pane"]').click();
+
+  ext_updateContador();
+  ext_updateView();
+
+  alert('✅ '+fichaXls_datos.length+' referencias enviadas al Extractor Masivo.\nDesde allí puedes editar, eliminar y descargar el Excel.');
+  document.querySelector('[data-bs-target="#extractor-pane"]').click();
 }
 
 function fichaXls_exportarExcel(){
