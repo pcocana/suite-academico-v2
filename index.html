@@ -1814,6 +1814,15 @@ function fichaXls_limpiarRef(texto){
   // Descarta sub-encabezados típicos de fichas de bibliografía
   if(/^(Libros?\s+y\s+cap[íi]tulos?|Art[íi]culos?\s+de\s+revisi[óo]n|Revisiones?\s+y\s+estado|Estado\s+del\s+arte|Aplicaciones?\s+(industriales?|espec[íi]ficas?|en\s+alimentos?)|Fundamentos?\s+(y\s+)?|Escalamiento\s+e\s+implementaci[óo]n|Evaluaci[óo]n\s+tecnol[óo]gica|Recursos?\s+(t[éeé]cnicos?|digitales?|aplicados?)|Perspectivas?\s+futuras?|Innovaci[óo]n\s+y|Sostenibilidad$|Bioecon[óo]m[íi]a|Regulaci[óo]n\s+y|Enzimolog[íi]a|Fermentaci[óo]n\s+y|Agricultura\s+celular|Materiales\s+y|Packaging\s+(activo|inteligente)|Luz\s+UV|Plasma\s+fr[íi]o|Seguridad\s+alimentaria$|Gesti[óo]n\s+de|Agua\s+y\s+|Tecnolog[íi]as?\s+de\s+mem|Sistemas?\s+alimentarios?$|Ingenier[íi]a\s+de\s+procesos?$|Huella\s+de\s+carbono\s+en|Econom[íi]a\s+circular$|Evaluaci[óo]n\s+ambiental$|Bioeconom[íi]a\s+y|Valorización\s+de|Eficiencia\s+energ[ée]tica$|Gestión\s+de\s+recursos|IoT\s+y\s+digit|Aplicaciones\s+en\s+alimentos?$|Industria\s+4\.0$|Tecnolog[íi]as?\s+emergentes?$|Python\s+y|Visualizaci[óo]n\s+y|Fundamentos\s+y\s+metodolog|Bases\s+de\s+datos\s+y|Huella\s+ambiental|Innovaci[óo]n\s+y\s+tendencias?|Ingredientes?\s+funcionales?$|Matrices?\s+alimentarias?$|Innovaci[óo]n\s+en\s+alimentos?$|Innovaci[óo]n\s+y\s+escalamiento|Validaci[óo]n\s+de\s+mercado|Industria\s+alimentaria$|Financiamiento\s+e|Evaluaci[óo]n\s+econ[óo]mica$|Comunicaci[óo]n\s+y\s+storytelling|Presentaci[óo]n\s+de\s+datos|Innovaci[óo]n\s+y\s+negocio|Comunicaci[óo]n\s+cient[íi]fica)/i.test(texto))return null;
 
+  // NUEVO: eliminar prefijo temático concatenado antes del primer autor
+  // Caso: "Revisiones y estado del arte Rendueles, E., ..."
+  // El prefijo: solo minúsculas/espacios/guión (sin mayúsculas internas ni dígitos)
+  // seguido de: Apellido, Inicial.  (patrón inequívoco de autor APA)
+  var hm=texto.match(/^([A-ZÁÉÍÓÚÑÜ][a-záéíóúñü\s\-]{8,60}?)\s{1,4}(?=[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{3,},\s[A-Z]\.)/);
+  if(hm && !/(?:19|20)\d{2}/.test(hm[1]) && !/[A-Z]\.\s/.test(hm[1])){
+    texto=texto.slice(hm[1].length).trim();
+  }
+
   // Debe tener año 4 dígitos (1900–2099)
   if(!/(?:19|20)\d{2}/.test(texto))return null;
 
